@@ -144,7 +144,7 @@
       <p class="notice" id="notice" role="alert" hidden></p>
       <div class="search">
         <label for="q">검색</label>
-        <input id="q" type="search" placeholder="고객번호, 전화번호 뒷자리, 어종 (예: 31, 1203, 조피볼락)" autocomplete="off">
+        <input id="q" type="search" placeholder="이름, 전화번호 뒷자리, 어종 (예: 김, 1203, 조피볼락)" autocomplete="off">
         <span class="note" id="q-count"></span>
       </div>
       <div class="stack">
@@ -277,8 +277,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 function matchQ(c){
   if(!q) return true;
   const digits = q.replace(/\D/g, '');
-  // 이름은 가려져 있어서 검색 대상에서 빼요
-  return c.contracts.some(k => k.species.includes(q)) || c.code.toLowerCase().includes(q.toLowerCase())
+  return c.name.includes(q) || c.contracts.some(k => k.species.includes(q)) || c.code.toLowerCase().includes(q.toLowerCase())
       || (digits.length >= 2 && (c.phone_masked || '').replace(/\D/g, '').includes(digits));
 }
 
@@ -293,7 +292,7 @@ function renderConsult(){
   if(histFarm && !custs.some(c => c.code === histFarm)) histFarm = null;
   document.getElementById('q-count').textContent = q ? `${custs.length}명` : `${office} ${base.length}명`;
   document.getElementById('cust-empty').textContent = base.length
-    ? '검색 결과가 없어요. 고객번호나 전화번호 뒷자리, 어종으로 찾아보세요.'
+    ? '검색 결과가 없어요. 이름 한 글자나 전화번호 뒷자리로 찾아보세요.'
     : progOnly
       ? `${office} 지역에 상담 진행 중인 고객이 없어요. '전체'를 누르면 모든 고객을 볼 수 있어요.`
       : `${office} 지역 고객이 없어요. 맨 위 '담당'에서 다른 지역을 골라 주세요.`;

@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>고객 상담 현황 · 고수온 선제 상담 대시보드</title>
+<style>
+  :root{ color-scheme:light;
+    --bg:#f4f6f9; --panel:#fff; --line:#e1e5ec; --line-strong:#cdd3dd; --soft:#f7f8fa;
+    --text:#161a22; --sub:#4b5363; --muted:#6b7385;
+    --accent:#1f5ae0; --accent-soft:#e8effd;
+    --normal:#3d6b4f; --normal-soft:#e6f2ea;
+    --watch:#1d5fb8; --watch-soft:#e3eefb;
+    --warn:#a8500a; --warn-soft:#fdf0e1;
+    --alert:#b42318; --alert-soft:#fdeaea;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  button,select,input,textarea{font:inherit;color:inherit}
+  button{cursor:pointer}
+  :focus-visible{outline:3px solid #93b4f5;outline-offset:2px}
+  td,th{font-variant-numeric:tabular-nums}
+
+
+  /* 사이드바 + 본문 */
+  .wrap{padding:0 20px 40px;min-width:0}
+  .page-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:18px 0 12px}
+  .page-h h2{font-size:20px}
+  .page-h p{font-size:13px;color:var(--muted)}
+  .sec-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:0 0 8px}
+  .sec-h h3{font-size:16px;font-weight:700}
+  .sec-h p{font-size:13px;color:var(--muted)}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);min-width:0}
+  .list-h{padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+  .filters{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{border:1px solid var(--line-strong);background:#fff;border-radius:999px;padding:3px 11px;font-size:13px;color:var(--sub)}
+  .chip[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:#fff}
+  .tbl-wrap{overflow-x:auto}
+
+  table{width:100%;border-collapse:collapse}
+  th{font-size:12px;font-weight:500;color:var(--muted);text-align:left;padding:8px 10px;background:#fafbfc;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+  td.num,th.num{text-align:right}
+  tbody tr.pick-row{cursor:pointer}
+  tbody tr.pick-row:hover{background:#f8fafd}
+  tbody tr[aria-selected="true"]{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+  .who b,.who small{display:block;white-space:nowrap}
+  .who small{color:var(--muted);font-size:12px}
+  /* 보험 상태 색: 가입 초록 · 특약 없음 노랑 · 미가입 빨강 */
+  .ins{display:inline-block;font-size:12.5px;font-weight:700;border-radius:6px;padding:1px 8px;white-space:nowrap;border:1px solid transparent}
+  .ins-ok{background:#dcf3e3;color:#17663a;border-color:#a9dcb9}
+  .ins-gap{background:#fff4c2;color:#7a5a00;border-color:#f0d873}
+  .ins-none{background:#fde4e2;color:#b42318;border-color:#f5b5ae}
+  /* 계약(1어종 1계약) */
+  .ctr-line{display:flex;align-items:center;gap:6px;white-space:nowrap;margin:2px 0;font-size:13px}
+  .ctr-line small{font-size:11.5px}
+  .sale-open{color:var(--sub);font-weight:500}
+  .sale-soon{color:var(--warn);font-weight:700}
+  .sale-later{color:var(--muted)}
+  .st{display:inline-block;font-size:12px;border-radius:6px;padding:1px 7px;background:#eef0f4;color:var(--sub);white-space:nowrap}
+  .st.todo{background:#fff;border:1px solid var(--line-strong);color:var(--text)}
+  .st.book{background:var(--watch-soft);color:var(--watch)}
+  .st.win{background:var(--normal-soft);color:var(--normal)}
+  .consent-y{color:var(--normal);font-weight:700}
+  .consent-n{color:var(--alert);font-weight:700}
+  .empty{padding:30px 16px;text-align:center;color:var(--muted)}
+  .note{font-size:12px;color:var(--muted)}
+  .btn{border-radius:8px;padding:10px 12px;font-weight:700;border:1px solid var(--line-strong);background:#fff;min-height:44px}
+  .btn.sm{min-height:0;padding:4px 10px;font-size:13px}
+
+  /* 고객 상담 현황 */
+  .search{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+  .search label{font-size:13px;color:var(--sub);font-weight:700}
+  .search input{flex:1;min-width:0;max-width:440px;border:1px solid var(--line-strong);border-radius:8px;padding:9px 12px;font-size:15px;background:#fff}
+  .stack{display:grid;gap:16px;grid-template-columns:minmax(0,1fr) minmax(300px,380px);align-items:start}
+  /* 오른쪽 과거 상담 내역: 목록을 내려도 화면에 붙어 있게 */
+  .hist-panel{position:sticky;top:16px;max-height:calc(100vh - 32px);display:flex;flex-direction:column}
+  .hist-list{list-style:none;overflow-y:auto;padding:4px 16px 12px}
+  .hist-item{padding:12px 0;border-bottom:1px solid var(--line);animation:hist-in .25s ease-out both}
+  .hist-item:last-child{border-bottom:0}
+  .hist-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
+  .hist-res{font-weight:700;white-space:nowrap;font-size:12.5px;color:var(--text);background:#eef0f4;border-radius:6px;padding:1px 8px}
+  .hist-who{margin-top:4px;font-size:14px}
+  .hist-who b{margin-right:6px}
+  .hist-who small{color:var(--muted);font-size:12.5px}
+  .hist-memo{margin-top:4px;font-size:14px;color:var(--sub)}
+  /* 상담 기록 삭제: 평소엔 흐리게, 기록에 마우스를 올리면 또렷하게 */
+  .hist-right{display:flex;align-items:center;gap:6px}
+  .hist-del{border:1px solid transparent;background:none;border-radius:6px;padding:0 6px;font-size:12px;color:var(--muted);opacity:.55;transition:opacity .15s,color .15s,border-color .15s}
+  .hist-item:hover .hist-del,.hist-del:focus-visible{opacity:1}
+  .hist-del:hover{color:var(--alert);border-color:#f5b5ae;background:var(--alert-soft)}
+  .hist-item.removing{opacity:.4;pointer-events:none}
+  .hist-pager{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .hist-pager[hidden]{display:none}
+  /* 삭제 확인 창 */
+  .confirm{margin:auto;border:0;border-radius:12px;padding:0;width:min(420px,calc(100vw - 32px));box-shadow:0 18px 48px rgba(20,30,50,.24);color:var(--text)}
+  .confirm::backdrop{background:rgba(22,26,34,.45)}
+  .confirm form{padding:18px 20px 16px;display:flex;flex-direction:column;gap:12px}
+  .confirm h4{font-size:17px;display:flex;align-items:center;gap:8px}
+  .confirm h4 .ic{width:26px;height:26px;border-radius:50%;background:var(--alert-soft);color:var(--alert);display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+  .confirm .sum{border:1px solid var(--line);border-radius:8px;background:var(--soft);padding:10px 12px;font-size:14px;display:grid;grid-template-columns:auto 1fr;gap:3px 12px}
+  .confirm .sum dt{color:var(--muted);font-size:13px}
+  .confirm .sum dd{min-width:0;overflow-wrap:anywhere}
+  .confirm .warn{font-size:13px;color:#7a1a12;background:var(--alert-soft);border:1px solid #f5c2bd;border-radius:8px;padding:8px 10px}
+  .confirm .ack{display:flex;gap:8px;align-items:flex-start;font-size:14px;cursor:pointer}
+  .confirm .ack input{margin-top:4px;width:16px;height:16px;accent-color:var(--alert)}
+  .confirm .btns{display:flex;justify-content:flex-end;gap:8px;margin-top:2px}
+  .btn.danger{background:var(--alert);border-color:var(--alert);color:#fff}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  @keyframes hist-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (max-width:1100px){
+    .stack{grid-template-columns:1fr}
+    .hist-panel{position:static;max-height:none}
+  }
+  .notice{margin:0 0 12px;padding:10px 12px;border-radius:8px;font-size:14px;background:var(--warn-soft);color:#7a3d06;border:1px solid #f3d3ad}
+
+  .foot{margin-top:18px;font-size:12px;color:var(--muted);line-height:1.7}
+  .foot a{color:inherit;font-weight:700;text-decoration:none}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1d2330;color:#fff;border-radius:8px;padding:10px 16px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw}
+  .toast.on{opacity:1}
+
+  @media (max-width:900px){
+  }
+  @media (max-width:640px){
+    .wrap{padding:0 16px 32px}
+  }
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}.hist-item{animation:none}}
+</style>
+<link rel="stylesheet" href="shell.css">
+<link rel="stylesheet" href="figma-theme.css">
+</head>
+<body>
+
+<script src="shell.js" data-part="header"></script>
+
+<div class="shell">
+  <script src="shell.js" data-part="nav" data-page="status"></script>
+
+  <main class="wrap">
+    <section id="page-consult">
+      <div class="page-h"><h2>고객 상담 현황</h2></div>
+      <p class="notice" id="notice" role="alert" hidden></p>
+      <div class="search">
+        <label for="q">검색</label>
+        <input id="q" type="search" placeholder="고객번호, 전화번호 뒷자리, 어종 (예: 31, 1203, 조피볼락)" autocomplete="off">
+        <span class="note" id="q-count"></span>
+      </div>
+      <div class="stack">
+        <section class="panel" aria-labelledby="h-cust">
+          <div class="list-h">
+            <div class="sec-h" style="margin:0"><h3 id="h-cust">고객 목록</h3></div>
+            <div class="filters" id="prog-filter">
+              <button type="button" class="chip" data-prog="0" aria-pressed="true">전체</button>
+              <button type="button" class="chip" data-prog="1" aria-pressed="false">진행</button>  
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th scope="col">고객</th><th scope="col">연락처</th><th scope="col">수신 동의</th><th scope="col">계약별 보험</th>
+                <th scope="col">현재 상태</th><th scope="col">최근 연락</th><th scope="col" class="num">상담</th><th scope="col"><span class="note">브리핑</span></th>
+              </tr></thead>
+              <tbody id="cust-rows"></tbody>
+            </table>
+          </div>
+          <nav class="hist-pager" id="cust-pager" aria-label="고객 목록 페이지" hidden></nav>
+          <div class="empty" id="loading">불러오는 중이에요…</div>
+          <div class="empty" id="cust-empty" hidden></div>
+        </section>
+        <section class="panel hist-panel" id="hist-panel" aria-labelledby="h-hist">
+          <div class="list-h">
+            <div class="sec-h" style="margin:0"><h3 id="h-hist">과거 상담 내역</h3><p id="hist-sub">최근 순</p></div>
+            <div class="filters" id="hist-filter"></div>
+          </div>
+          <ul class="hist-list" id="hist-rows" aria-live="polite"></ul>
+          <div class="empty" id="hist-empty" hidden>상담 내역이 없어요.</div>
+          <nav class="hist-pager" id="hist-pager" aria-label="상담 내역 페이지" hidden></nav>
+        </section>
+      </div>
+    </section>
+
+    <p class="foot">
+      <span class="foot-rule">위험 단계는 앱 기준(관심 25℃ · 주의 28℃ · 경보 28℃ 이상 3일)으로 판정한 참고값이며,</span> 공식 특보나 보험금 지급 기준이 아닙니다(Weather data by Open-Meteo.com).<br>
+      문의 · 수협중앙회 경남지역본부 <a href="tel:0552891124">055-289-1124</a> · 수협은행 경남지역본부 <a href="tel:0556030466">055-603-0466</a>
+    </p>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- 상담 기록 삭제 확인 (평소 삭제하지 않으므로 한 번 더 확인) -->
+<dialog class="confirm" id="del-dialog" aria-labelledby="del-title">
+  <form method="dialog">
+    <h4 id="del-title"><span class="ic" aria-hidden="true">!</span>상담 기록을 삭제할까요?</h4>
+    <dl class="sum" id="del-sum"></dl>
+    <p class="warn" id="del-warn">삭제하면 되돌릴 수 없어요. 이 기록의 어종별 결과도 함께 지워지고, 고객의 현재 상태는 남은 기록 중 가장 최근 것으로 바뀌어요.</p>
+    <label class="ack"><input type="checkbox" id="del-ack"><span>확인함</span></label>
+    <div class="btns">
+      <button type="submit" class="btn" value="cancel" id="del-cancel" autofocus>취소</button>
+      <button type="button" class="btn danger" id="del-ok" disabled>삭제</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+/* 서버에 연결하지 못했을 때만 보여 주는 가상 데이터. 형태는 API 응답과 같음 (원본 대시보드 판정값을 옮김) */
+const SAMPLE = {
+  customers: [
+    {"code": "A-012", "name": "김○○", "phone_masked": "010-****-1203", "sms_consent": true, "region": "통영", "contracts": [{"species": "조피볼락", "coverage": "none", "sale_text": "가능"}, {"species": "참돔", "coverage": "no_rider", "sale_text": "가능"}], "risk_stage": 2, "status": "미연락", "last_contact": null, "consult_count": 0},
+    {"code": "A-031", "name": "박○○", "phone_masked": "010-****-3318", "sms_consent": true, "region": "통영", "contracts": [{"species": "참돔", "coverage": "no_rider", "sale_text": "가능"}], "risk_stage": 2, "status": "미연락", "last_contact": "2026-05-14", "consult_count": 1},
+    {"code": "A-044", "name": "정○○", "phone_masked": "010-****-4410", "sms_consent": true, "region": "통영", "contracts": [{"species": "멍게", "coverage": "none", "sale_text": "이번 달 마감"}, {"species": "전복", "coverage": "check_exclusion", "sale": null, "sale_text": null}], "risk_stage": 2, "status": "미연락", "last_contact": "2026-03-02", "consult_count": 1},
+    {"code": "A-053", "name": "임○○", "phone_masked": "010-****-5307", "sms_consent": false, "region": "통영", "contracts": [{"species": "조피볼락", "coverage": "none", "sale_text": "가능"}], "risk_stage": 2, "status": "미연락", "last_contact": null, "consult_count": 0},
+    {"code": "A-060", "name": "배○○", "phone_masked": "010-****-6021", "sms_consent": true, "region": "통영", "contracts": [{"species": "참돔", "coverage": "none", "sale_text": "가능"}], "risk_stage": 2, "status": "상담 예약", "last_contact": "2026-10-21", "consult_count": 1},
+    {"code": "A-071", "name": "신○○", "phone_masked": "010-****-7190", "sms_consent": true, "region": "통영", "contracts": [{"species": "굴", "coverage": "none", "sale_text": "11월부터"}], "risk_stage": 2, "status": "미연락", "last_contact": null, "consult_count": 0},
+    {"code": "A-082", "name": "류○○", "phone_masked": "010-****-8236", "sms_consent": true, "region": "통영", "contracts": [{"species": "멍게", "coverage": "none", "sale_text": "이번 달 마감"}], "risk_stage": 2, "status": "문자 발송", "last_contact": "2026-10-21", "consult_count": 1},
+    {"code": "A-027", "name": "조○○", "phone_masked": "010-****-2716", "sms_consent": true, "region": "통영", "contracts": [{"species": "감성돔", "coverage": "covered", "sale": null, "sale_text": null}], "risk_stage": 2, "status": "안내 완료", "last_contact": "2026-10-21", "consult_count": 1},
+    {"code": "B-007", "name": "이○○", "phone_masked": "010-****-0727", "sms_consent": true, "region": "거제", "contracts": [{"species": "멍게", "coverage": "none", "sale_text": "이번 달 마감"}, {"species": "굴", "coverage": "none", "sale_text": "11월부터"}], "risk_stage": 1, "status": "부재·재연락", "last_contact": "2026-10-21", "consult_count": 1},
+    {"code": "B-015", "name": "강○○", "phone_masked": "010-****-1588", "sms_consent": true, "region": "거제", "contracts": [{"species": "볼락", "coverage": "none", "sale_text": "가능"}], "risk_stage": 1, "status": "미연락", "last_contact": null, "consult_count": 0},
+    {"code": "C-019", "name": "최○○", "phone_masked": "010-****-1955", "sms_consent": true, "region": "고성", "contracts": [{"species": "굴", "coverage": "none", "sale_text": "11월부터"}], "risk_stage": 1, "status": "상담 예약", "last_contact": "2026-10-20", "consult_count": 2},
+    {"code": "C-003", "name": "윤○○", "phone_masked": "010-****-0391", "sms_consent": false, "region": "고성", "contracts": [{"species": "돌돔", "coverage": "none", "sale_text": "가능"}], "risk_stage": 1, "status": "미연락", "last_contact": null, "consult_count": 0},
+    {"code": "D-021", "name": "한○○", "phone_masked": "010-****-2140", "sms_consent": true, "region": "남해", "contracts": [{"species": "전복", "coverage": "no_rider", "sale_text": "가능"}], "risk_stage": 1, "status": "부재·재연락", "last_contact": "2026-10-21", "consult_count": 1},
+    {"code": "E-008", "name": "서○○", "phone_masked": "010-****-0862", "sms_consent": true, "region": "창원", "contracts": [{"species": "오만둥이", "coverage": "none", "sale_text": "가능"}], "risk_stage": 1, "status": "미연락", "last_contact": null, "consult_count": 0},
+    {"code": "F-002", "name": "오○○", "phone_masked": "010-****-0225", "sms_consent": true, "region": "하동", "contracts": [{"species": "참돔", "coverage": "covered", "sale": null, "sale_text": null}], "risk_stage": 0, "status": "가입 완료", "last_contact": "2026-08-14", "consult_count": 2},
+  ],
+  history: [
+    {"code": "A-060", "name": "배○○", "region": "통영", "species": ["참돔"], "date": "2026-10-21", "result": "상담 예약", "memo": "통화 · 견적 요청, 10/24 14:00 방문 상담"},
+    {"code": "A-082", "name": "류○○", "region": "통영", "species": ["멍게"], "date": "2026-10-21", "result": "문자 발송", "memo": "부재 → 판매 마감 안내 문자"},
+    {"code": "A-027", "name": "조○○", "region": "통영", "species": ["감성돔"], "date": "2026-10-21", "result": "안내 완료", "memo": "통화 · 경보 시 의무(먹이 중단·선별 금지) 안내"},
+    {"code": "B-007", "name": "이○○", "region": "거제", "species": ["멍게", "굴"], "date": "2026-10-21", "result": "부재 · 다시 연락", "memo": "부재 → 10/23 재연락"},
+    {"code": "D-021", "name": "한○○", "region": "남해", "species": ["전복"], "date": "2026-10-21", "result": "부재 · 다시 연락", "memo": "부재 (2회)"},
+    {"code": "C-019", "name": "최○○", "region": "고성", "species": ["굴"], "date": "2026-10-20", "result": "상담 예약", "memo": "통화 · 11월 판매 시작 후 상담 (11/3 10:00)"},
+    {"code": "C-019", "name": "최○○", "region": "고성", "species": ["굴"], "date": "2026-09-30", "result": "부재 · 다시 연락", "memo": "부재"},
+    {"code": "F-002", "name": "오○○", "region": "하동", "species": ["참돔"], "date": "2026-08-14", "result": "가입 완료", "memo": "참돔 · 해상가두리어류 재해보험 + 고수온 특약"},
+    {"code": "F-002", "name": "오○○", "region": "하동", "species": ["참돔"], "date": "2026-08-11", "result": "상담 예약", "memo": "창구 상담 예약"},
+    {"code": "A-031", "name": "박○○", "region": "통영", "species": ["참돔"], "date": "2026-05-14", "result": "가입", "memo": "참돔 기본 보험만 가입 (창구 방문)"},
+    {"code": "A-044", "name": "정○○", "region": "통영", "species": ["전복", "멍게"], "date": "2026-03-02", "result": "가입", "memo": "해상 전복 보험 가입"},
+  ],
+};
+
+const COVERAGE = {
+  none:            {label:'미가입',          cls:'ins ins-none'},
+  no_rider:        {label:'특약 없음',       cls:'ins ins-gap'},
+  check_exclusion: {label:'가입',            cls:'ins ins-ok'},
+  covered:         {label:'가입(특약 포함)', cls:'ins ins-ok'},
+};
+const STATUS_CLS = {'미연락':'todo', '상담 예약':'book', '가입 완료':'win'};
+const saleCls = t => t === '가능' ? 'sale-open' : t === '이번 달 마감' ? 'sale-soon' : 'sale-later';
+
+// 파일로 열면 출처가 null이라 CORS가 막히므로, 같은 PC의 백엔드 8000 포트를 부름
+const API = (location.protocol === 'file:' ? 'http://127.0.0.1:8000'
+  : location.port === '8765' ? `${location.protocol}//${location.hostname}:8000`
+  : location.origin) + '/api/consult';   // 배포(Render) 등 백엔드가 화면을 같이 내보낼 때는 같은 주소
+let customers = [], history = [], dbMode = false;
+let q = '', histFarm = null;
+const HIST_PER_PAGE = 6;
+let histPage = 1, histKey = '';
+const CUST_PER_PAGE = 8;
+let custPage = 1, custKey = '', custSelected = null;
+
+// 담당 지역: 상담 홈·어가 상세·수온 예측 맨 위 '담당'에서 고른 값 (같은 이름으로 이 브라우저에 저장됨)
+const OFFICE_KEY = 'heat-dashboard-office';
+const OFFICES = ['통영','사천','거제','고성','남해','창원','하동'];
+function getOffice(){ try{ return localStorage.getItem(OFFICE_KEY) || '통영'; }catch(e){ return '통영'; } }
+function putOffice(id){ try{ localStorage.setItem(OFFICE_KEY, id); }catch(e){} }
+let office = OFFICES.includes(getOffice()) ? getOffice() : '통영';
+const inRegion = c => c.region === office;   // 항상 담당 지역 고객만
+
+// 상담 진행 중 = 연락은 했지만 아직 끝나지 않은 상태 (미연락·가입 완료·안내 완료·보류·거절은 제외)
+const IN_PROGRESS = ['부재·재연락', '문자 발송', '상담 예약'];
+let progOnly = false;
+const inProgress = c => !progOnly || IN_PROGRESS.includes(c.status);
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function matchQ(c){
+  if(!q) return true;
+  const digits = q.replace(/\D/g, '');
+  // 이름은 가려져 있어서 검색 대상에서 빼요
+  return c.contracts.some(k => k.species.includes(q)) || c.code.toLowerCase().includes(q.toLowerCase())
+      || (digits.length >= 2 && (c.phone_masked || '').replace(/\D/g, '').includes(digits));
+}
+
+function ctrLines(c){
+  return c.contracts.map(k => `<div class="ctr-line"><b>${esc(k.species)}</b><span class="${COVERAGE[k.coverage].cls}">${COVERAGE[k.coverage].label}</span>${k.sale_text ? `<small class="${saleCls(k.sale_text)}">${esc(k.sale_text)}</small>` : ''}</div>`).join('');
+}
+
+function renderConsult(){
+  const base = customers.filter(inRegion).filter(inProgress);
+  document.querySelectorAll('#prog-filter [data-prog]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.prog === '1') === progOnly)));
+  const custs = base.filter(matchQ);
+  if(histFarm && !custs.some(c => c.code === histFarm)) histFarm = null;
+  document.getElementById('q-count').textContent = q ? `${custs.length}명` : `${office} ${base.length}명`;
+  document.getElementById('cust-empty').textContent = base.length
+    ? '검색 결과가 없어요. 고객번호나 전화번호 뒷자리, 어종으로 찾아보세요.'
+    : progOnly
+      ? `${office} 지역에 상담 진행 중인 고객이 없어요. '전체'를 누르면 모든 고객을 볼 수 있어요.`
+      : `${office} 지역 고객이 없어요. 맨 위 '담당'에서 다른 지역을 골라 주세요.`;
+  document.getElementById('cust-empty').hidden = custs.length > 0;
+  const customerKey = [office, progOnly, q].join('|');
+  if(customerKey !== custKey){ custKey = customerKey; custPage = 1; }
+  // 알림에서 목록 밖 고객을 선택한 경우 그 고객이 있는 페이지를 열어요.
+  if(histFarm && histFarm !== custSelected){
+    custPage = Math.floor(custs.findIndex(c => c.code === histFarm) / CUST_PER_PAGE) + 1;
+  }
+  custSelected = histFarm;
+  const customerPages = Math.max(1, Math.ceil(custs.length / CUST_PER_PAGE));
+  custPage = Math.max(1, Math.min(custPage, customerPages));
+  const customerPager = document.getElementById('cust-pager');
+  customerPager.hidden = customerPages < 2;
+  customerPager.innerHTML = `<button type="button" class="btn sm" data-cust-page="${custPage - 1}"${custPage === 1 ? ' disabled' : ''}>‹ 이전</button>
+      <span aria-current="page">${custPage} / ${customerPages}</span>
+      <button type="button" class="btn sm" data-cust-page="${custPage + 1}"${custPage === customerPages ? ' disabled' : ''}>다음 ›</button>`;
+  document.getElementById('cust-rows').innerHTML = custs.slice((custPage - 1) * CUST_PER_PAGE, custPage * CUST_PER_PAGE).map(c => `<tr class="pick-row" data-cust="${esc(c.code)}" tabindex="0" aria-selected="${histFarm===c.code}">
+      <td class="who"><b>${esc(c.name)}</b><small>${esc(c.code)}</small></td>
+      <td>${c.phone_masked ? esc(c.phone_masked) : '–'}</td>
+      <td>${!c.phone_masked ? '–' : c.sms_consent ? '<span class="consent-y" title="수신 동의" aria-label="수신 동의"><svg class="cs-ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/></svg></span>' : '<span class="consent-n" title="수신 미동의" aria-label="수신 미동의"><svg class="cs-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></span>'}</td>
+      <td>${ctrLines(c)}</td>
+      <td><span class="st ${STATUS_CLS[c.status] || ''}">${esc(c.status)}</span></td>
+      <td>${c.last_contact ? esc(c.last_contact) : '–'}</td>
+      <td class="num">${c.consult_count}</td>
+      <td><button type="button" class="btn sm" data-open="${esc(c.code)}">열기</button></td>
+    </tr>`).join('');
+
+  const codes = new Set((histFarm ? custs.filter(c => c.code === histFarm) : custs).map(c => c.code));
+  const items = history.filter(h => codes.has(h.code));
+  const hf = customers.find(c => c.code === histFarm);
+  document.getElementById('hist-sub').textContent = hf ? `${hf.name} (${hf.code}) · ${items.length}건 · 최근 순` : `${items.length}건 · 최근 순`;
+  document.getElementById('hist-filter').innerHTML = hf ? `<button type="button" class="chip" data-hist-all aria-pressed="true" aria-label="${esc(hf.name)} 선택 해제, 전체 보기">${esc(hf.name)} ✕</button>` : '';
+  document.getElementById('hist-empty').hidden = items.length > 0;
+  document.getElementById('hist-empty').textContent = hf ? `${hf.name} 고객은 아직 상담 내역이 없어요.` : '상담 내역이 없어요.';
+  // 지역·필터·검색·고객이 바뀌면 1페이지부터, 삭제로 마지막 페이지가 비면 앞 페이지로
+  const key = [office, progOnly, q, histFarm].join('|');
+  if(key !== histKey){ histKey = key; histPage = 1; }
+  const pages = Math.max(1, Math.ceil(items.length / HIST_PER_PAGE));
+  histPage = Math.min(histPage, pages);
+  const pager = document.getElementById('hist-pager');
+  pager.hidden = pages < 2;
+  pager.innerHTML = `<button type="button" class="btn sm" data-hist-page="${histPage - 1}"${histPage === 1 ? ' disabled' : ''}>‹ 이전</button>
+      <span aria-current="page">${histPage} / ${pages}</span>
+      <button type="button" class="btn sm" data-hist-page="${histPage + 1}"${histPage === pages ? ' disabled' : ''}>다음 ›</button>`;
+  document.getElementById('hist-rows').innerHTML = items.slice((histPage - 1) * HIST_PER_PAGE, histPage * HIST_PER_PAGE).map(h => `<li class="hist-item" data-log="${esc(h.log_id)}">
+      <div class="hist-top"><span>${esc(h.date)}</span><span class="hist-right"><span class="hist-res">${esc(h.result)}</span>${h.log_id != null
+        ? `<button type="button" class="hist-del" data-del="${esc(h.log_id)}" aria-label="${esc(h.date)} ${esc(h.name)} 상담 기록 삭제" title="이 상담 기록 삭제">삭제</button>` : ''}</span></div>
+      <div class="hist-who">${hf ? '' : `<b>${esc(h.name)}</b>`}<small>${h.species.map(esc).join(' · ')}</small></div>
+      <div class="hist-memo">${esc(h.memo)}</div>
+    </li>`).join('');
+}
+// 이름은 성만 보이게 가려요 (예: 박종수 → 박○○)
+const maskName = n => n ? n[0] + '○'.repeat(Math.max(1, [...n].length - 1)) : n;
+async function loadMasked(){
+  const [c, h] = await Promise.all([getJSON(`/customers?mode=${Shell.mode}`), getJSON('/history')]);
+  c.forEach(x => { x.name = maskName(x.name); });
+  h.forEach(x => { x.name = maskName(x.name); });
+  return [c, h];
+}
+
+async function getJSON(path){
+  const res = await fetch(API + path);
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function load(){
+  const notice = document.getElementById('notice');
+  try{
+    [customers, history] = await loadMasked();
+    dbMode = true;
+    document.getElementById('data-mode').textContent = 'DB 연결됨';
+    document.getElementById('updated').textContent = `마지막 조회 ${Shell.lastViewed()}`;
+  }catch(e){
+    customers = structuredClone(SAMPLE.customers);
+    history = SAMPLE.history.map((h, i) => ({...h, log_id:'s' + i}));   // 가상 데이터용 기록 번호
+    dbMode = false;
+    notice.textContent = location.protocol === 'file:'
+      ? '⚠️ 파일로 열면 서버에 연결할 수 없어 가상 데이터를 보여 주고 있어요. http://localhost:8765/consult_status.html 로 열어 주세요.'
+      : `⚠️ 서버에 연결하지 못해 가상 데이터를 보여 주고 있어요. 백엔드(8000 포트)가 켜져 있는지 확인해 주세요. (${e.message})`;
+    notice.hidden = false;
+    document.getElementById('data-mode').textContent = '가상 데이터 · 서버 연결 실패';
+    document.getElementById('updated').textContent = '2026.10.22 (목) 06:00 갱신';
+  }
+  document.getElementById('loading').hidden = true;
+  renderConsult();
+  const want = new URLSearchParams(location.search).get('cust');   // 알림에서 들어온 고객
+  if(want) focusCustomer(want);
+}
+
+/* 알림으로 고른 고객을 보여 줘요: 담당 지역을 그 고객 지역으로 · 검색·'진행' 필터 해제 · 고객 선택(오른쪽 상담 내역) · 그 줄로 스크롤 */
+function focusCustomer(code){
+  const c = customers.find(x => x.code === String(code));
+  if(!c){ toast('알림의 고객을 목록에서 찾지 못했어요'); return; }
+  if(c.region && c.region !== office && OFFICES.includes(c.region)){
+    office = c.region; officeSel.value = office; putOffice(office);
+  }
+  q = ''; document.getElementById('q').value = '';
+  progOnly = false;
+  histFarm = c.code;
+  renderConsult();
+  try{ window.history.replaceState(null, '', location.pathname + '?cust=' + encodeURIComponent(c.code)); }catch(e){}
+  const tr = document.querySelector(`tr[data-cust="${CSS.escape(c.code)}"]`);
+  if(tr){ tr.scrollIntoView({block:'center', behavior:'smooth'}); tr.focus({preventScroll:true}); }
+  if(matchMedia('(max-width:1100px)').matches) document.getElementById('hist-panel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+// 이 화면에 있을 때 알림을 누르면 새로고침 없이 바로 그 고객을 선택해요
+document.addEventListener('shell:noti', e => {
+  if(!e.detail.farm || !customers.some(x => x.code === String(e.detail.farm))) return;   // 목록에 없으면 공통 동작(이동)
+  e.preventDefault();
+  focusCustomer(e.detail.farm);
+});
+
+let toastT;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2600);
+}
+
+document.getElementById('q').addEventListener('input', e => { q = e.target.value.trim(); renderConsult(); });
+const officeSel = document.getElementById('office');
+officeSel.innerHTML = OFFICES.map(r => `<option value="${r}">${r} 지역 담당</option>`).join('');
+officeSel.value = office;
+officeSel.addEventListener('change', e => { office = e.target.value; putOffice(office); histFarm = null; renderConsult(); });
+document.getElementById('prog-filter').addEventListener('click', e => {
+  const b = e.target.closest('[data-prog]');
+  if(b){ progOnly = b.dataset.prog === '1'; histFarm = null; renderConsult(); }
+});
+const consultEl = document.getElementById('page-consult');
+consultEl.addEventListener('click', e => {
+  const o = e.target.closest('[data-open]');
+  if(o){ location.href = 'farm_detail.html?id=' + encodeURIComponent(o.dataset.open); return; }
+  if(e.target.closest('[data-hist-all]')){ histFarm = null; renderConsult(); return; }
+  const tr = e.target.closest('tr[data-cust]');
+  if(tr) pickCustomer(tr.dataset.cust);
+});
+consultEl.addEventListener('keydown', e => {
+  const tr = e.target.closest('tr[data-cust]');
+  if(tr && (e.key === 'Enter' || e.key === ' ') && !e.target.closest('button')){ e.preventDefault(); pickCustomer(tr.dataset.cust); }
+});
+// 좁은 화면에서는 상담 내역이 목록 아래로 내려가므로, 고객을 고르면 그쪽으로 이동
+function pickCustomer(code){
+  histFarm = histFarm === code ? null : code;
+  renderConsult();
+  try{ window.history.replaceState(null, '', location.pathname + (histFarm ? '?cust=' + encodeURIComponent(histFarm) : '')); }catch(e){}
+  if(histFarm && matchMedia('(max-width:1100px)').matches) document.getElementById('hist-panel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ===== 상담 기록 삭제 =====
+   1) 기록의 '삭제' → 2) 확인 창에서 내용 확인 + '되돌릴 수 없다는 것을 확인' 체크 → 3) 삭제
+   서버: DELETE /api/consult/logs/{log_id} (consult_log_items → consult_logs 삭제, consult_cases 를 남은 기록 기준으로 다시 맞춤) */
+const delDialog = document.getElementById('del-dialog'), delAck = document.getElementById('del-ack'), delOk = document.getElementById('del-ok');
+let delTarget = null, delReturn = null;
+function askDelete(logId, opener){
+  const h = history.find(x => String(x.log_id) === String(logId)); if(!h) return;
+  delTarget = h; delReturn = opener;
+  const sameCust = history.filter(x => x.code === h.code);
+  const isLatest = sameCust[0] === h;
+  document.getElementById('del-sum').innerHTML = `
+    <dt>고객</dt><dd>${esc(h.name)} <span class="note">(${esc(h.code)})</span></dd>
+    <dt>날짜</dt><dd>${esc(h.date)}${h.channel ? ' · ' + esc(h.channel) : ''}${h.staff_name ? ' · ' + esc(h.staff_name) : ''}</dd>
+    <dt>결과</dt><dd><b>${esc(h.result)}</b></dd>
+    <dt>내용</dt><dd>${esc(h.memo)}</dd>`;
+  const next = sameCust[1];
+  document.getElementById('del-warn').textContent = '삭제하면 되돌릴 수 없어요. 이 기록의 어종별 결과도 함께 지워져요.' + (isLatest
+    ? (next ? ` 가장 최근 기록이라 고객의 현재 상태가 '${next.result}'(${next.date})로 바뀌어요.` : ' 남은 기록이 없어 고객이 \'미연락\' 상태로 돌아가요.')
+    : '') + ' 삭제의 책임은 해당 담당자에게 있습니다.';
+  delAck.checked = false; delOk.disabled = true; delOk.textContent = '삭제';
+  delDialog.showModal();
+}
+delAck.addEventListener('change', () => { delOk.disabled = !delAck.checked; });
+delDialog.addEventListener('close', () => { delTarget = null; if(delReturn && document.contains(delReturn)) delReturn.focus(); delReturn = null; });
+delOk.addEventListener('click', async () => {
+  const h = delTarget; if(!h || !delAck.checked) return;
+  delOk.disabled = true; delOk.textContent = '삭제 중…';
+  const li = document.querySelector(`.hist-item[data-log="${CSS.escape(String(h.log_id))}"]`);
+  if(li) li.classList.add('removing');
+  try{
+    if(dbMode){
+      // 쓰기 요청은 백엔드 규칙상 X-CSRF-Protection: 1 헤더가 필요해요
+      const res = await fetch(`${API}/logs/${encodeURIComponent(h.log_id)}`, {method:'DELETE', headers:{'X-CSRF-Protection':'1'}});
+      if(!res.ok && res.status !== 404){
+        let msg = `HTTP ${res.status}`;
+        try{ const j = await res.json(); if(j.detail) msg += ' · ' + (typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)); }catch(e){}
+        throw new Error(msg);
+      }
+      // 상태·최근 연락·상담 수가 바뀌므로 서버에서 다시 받아요
+      [customers, history] = await loadMasked();
+      toast(res.status === 404 ? '이미 지워진 기록이에요 · 목록을 새로 불러왔어요' : `${h.name} ${h.date} 상담 기록을 삭제했어요`);
+      if(window.Shell) Shell.reloadNoti();   // 지운 기록의 알림도 함께 사라지게
+    }else{
+      history = history.filter(x => x !== h);
+      const c = customers.find(x => x.code === h.code), rest = history.filter(x => x.code === h.code);
+      if(c){ c.consult_count = rest.length; c.last_contact = rest[0] ? rest[0].date : null; c.status = rest[0] ? rest[0].result.replace(' · ', '·') : '미연락'; }
+      toast('가상 데이터라 이 화면에서만 지웠어요');
+    }
+    delDialog.close();
+    renderConsult();
+  }catch(e){
+    if(li) li.classList.remove('removing');
+    delOk.disabled = false; delOk.textContent = '삭제';
+    toast('삭제하지 못했어요 · ' + e.message);
+  }
+});
+document.getElementById('hist-rows').addEventListener('click', e => {
+  const b = e.target.closest('[data-del]'); if(b) askDelete(b.dataset.del, b);
+});
+document.getElementById('hist-pager').addEventListener('click', e => {
+  const b = e.target.closest('[data-hist-page]'); if(!b) return;
+  histPage = Number(b.dataset.histPage);
+  renderConsult();
+  document.getElementById('hist-rows').scrollTop = 0;
+});
+document.getElementById('cust-pager').addEventListener('click', e => {
+  const b = e.target.closest('[data-cust-page]'); if(!b || b.disabled) return;
+  custPage = Number(b.dataset.custPage);
+  renderConsult();
+});
+
+load();
+</script>
+</body>
+</html>

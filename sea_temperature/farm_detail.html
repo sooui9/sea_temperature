@@ -1,0 +1,2176 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>어가 상세 · 고수온 선제 상담 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{ color-scheme:light;
+    --bg:#f4f6f9; --panel:#fff; --line:#e1e5ec; --line-strong:#cdd3dd; --soft:#f7f8fa;
+    --text:#161a22; --sub:#4b5363; --muted:#6b7385;
+    --accent:#1f5ae0; --accent-soft:#e8effd;
+    --normal:#3d6b4f; --normal-soft:#e6f2ea;
+    --watch:#1d5fb8; --watch-soft:#e3eefb;
+    --warn:#a8500a; --warn-soft:#fdf0e1;
+    --alert:#b42318; --alert-soft:#fdeaea;
+    --om:#8a96a3; --th25:#d4a900; --th28:#e8740c;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  button,select,input,textarea{font:inherit;color:inherit}
+  button{cursor:pointer}
+  :focus-visible{outline:3px solid #93b4f5;outline-offset:2px}
+  td,th,.kpi b,.tp{font-variant-numeric:tabular-nums}
+
+
+  /* 사이드바 + 본문 */
+  .wrap{padding:0 20px 40px;min-width:0}
+  .page-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:18px 0 12px}
+  .page-h h2{font-size:20px}
+  .page-h p{font-size:13px;color:var(--muted)}
+
+  /* 오늘 할 일 요약 */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px}
+  .kpi b{display:block;font-size:26px;font-weight:700;line-height:1.2}
+  .kpi span{font-size:13px;color:var(--sub)}
+  .kpi.hl{border-color:#b9cdf6;background:var(--accent-soft)}
+
+  .sec-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:0 0 8px}
+  .sec-h h2,.sec-h h3{font-size:16px;font-weight:700}
+  .sec-h p{font-size:13px;color:var(--muted)}
+
+  /* 지역 위험 현황 */
+  .regions{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:18px}
+  .region{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;text-align:left;display:flex;flex-direction:column;gap:3px;transition:border-color .15s}
+  .region:hover{border-color:var(--line-strong)}
+  .region[aria-pressed="true"]{border:2px solid var(--accent);padding:9px 11px}
+  .region .nm{font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .region .tp{font-size:22px;font-weight:700;line-height:1.2}
+  .region .nx{font-size:12px;color:var(--sub)}
+  .days{display:flex;gap:2px;margin-top:2px}
+  .days i{flex:1;height:6px;border-radius:2px;background:#8fd1a5}
+  .days i.s1{background:#f2d046}.days i.s2{background:#e8740c}.days i.s3{background:#d9534a}
+
+  .badge{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;border-radius:6px;padding:1px 7px;white-space:nowrap}
+  .badge.s0{color:#1f5c36;background:#c3e8cf}
+  .badge.s1{color:#7a5a00;background:#fff1b8}
+  .badge.s2{color:#7a3300;background:#fbcf9c}
+  .badge.s3{color:var(--alert);background:var(--alert-soft)}
+
+  /* 홈 2단 */
+  .main{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);min-width:0}
+  .panel-in{padding:14px 16px}
+  .list-h{padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+  .filters{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{border:1px solid var(--line-strong);background:#fff;border-radius:999px;padding:3px 11px;font-size:13px;color:var(--sub)}
+  .chip[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:#fff}
+  .tbl-wrap{overflow-x:auto}
+
+  table{width:100%;border-collapse:collapse}
+  th{font-size:12px;font-weight:500;color:var(--muted);text-align:left;padding:8px 10px;background:#fafbfc;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+  tbody tr.pick-row{cursor:pointer}
+  tbody tr.pick-row:hover{background:#f8fafd}
+  tbody tr[aria-selected="true"]{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+  tbody tr.done td{color:var(--muted)}
+  .rank{font-weight:700;font-size:16px;text-align:center;width:40px}
+  .who b{display:block}
+  .who small,.reason small{color:var(--muted);font-size:12px}
+  /* 보험 상태 색: 가입 초록 · 특약 없음 노랑 · 미가입 빨강 · 모름 검정 */
+  .ins{display:inline-block;font-size:12.5px;font-weight:700;border-radius:6px;padding:1px 8px;white-space:nowrap;border:1px solid transparent}
+  .ins-ok{background:#dcf3e3;color:#17663a;border-color:#a9dcb9}
+  .ins-gap{background:#fff4c2;color:#7a5a00;border-color:#f0d873}
+  .ins-none{background:#fde4e2;color:#b42318;border-color:#f5b5ae}
+  .ins-unk{background:#1d2330;color:#fff}
+  /* 계약(1어종 1계약) */
+  .ctr-line{display:flex;align-items:center;gap:6px;white-space:nowrap;margin:2px 0;font-size:13px}
+  .ctr-line small{font-size:11.5px}
+  .ctr-cards{display:flex;flex-direction:column;gap:8px}
+  .ctr-card{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--soft)}
+  .ctr-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:15px}
+  .ctr-no{width:20px;height:20px;border-radius:50%;background:var(--text);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+  .ctr-q{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:14px}
+  .ctr-q input{width:90px;border:1px solid var(--line-strong);border-radius:6px;padding:3px 8px;text-align:right;background:#fff}
+  .ctr-total{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--accent-soft);font-size:14px}
+  .ctr-total b{font-size:18px}
+  .sale-open{color:var(--sub);font-weight:500}
+  .sale-soon{color:var(--warn);font-weight:700}
+  .sale-later{color:var(--muted)}
+  .sp-hit{color:var(--warn);font-weight:700}
+  .sp-none{color:var(--muted);font-size:13px}
+  .st{display:inline-block;font-size:12px;border-radius:6px;padding:1px 7px;background:#eef0f4;color:var(--sub);white-space:nowrap}
+  .st.todo{background:#fff;border:1px solid var(--line-strong);color:var(--text)}
+  .st.book{background:var(--watch-soft);color:var(--watch)}
+  .st.win{background:var(--normal-soft);color:var(--normal)}
+  .empty{padding:30px 16px;text-align:center;color:var(--muted)}
+  .score{font-size:11px;color:var(--muted);display:block;margin-top:2px}
+
+  /* 어가 브리핑 */
+  .b-head{padding:14px 16px;border-bottom:1px solid var(--line)}
+  .b-head h2{font-size:18px}
+  .b-head p{font-size:13px;color:var(--sub)}
+  .b-sec{padding:12px 16px;border-bottom:1px solid var(--line)}
+  .b-sec h3{font-size:13px;font-weight:700;color:var(--sub);margin-bottom:6px}
+  .risk-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:16px;font-weight:700}
+  .note{font-size:12px;color:var(--muted)}
+  .linkish{border:0;background:none;color:var(--accent);font-size:12px;font-weight:700;padding:0}
+  .facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}
+  .facts dt{color:var(--muted)}
+  .ok{color:var(--normal);font-weight:700}
+  .ng{color:var(--alert);font-weight:700}
+  .calc{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;font-size:14px}
+  .calc input{width:110px;border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;text-align:right}
+  .calc .tot{border-top:1px solid var(--line);padding-top:6px;font-weight:700}
+  .acc{border-bottom:1px solid var(--line)}
+  .acc>summary{list-style:none;cursor:pointer;padding:11px 16px;display:flex;align-items:center;gap:10px;font-size:14px}
+  .acc>summary::-webkit-details-marker{display:none}
+  .acc>summary:hover{background:#f8fafd}
+  .acc>summary .t{font-weight:700;font-size:13px;color:var(--sub);white-space:nowrap}
+  .acc>summary .s{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .acc>summary .arw{color:var(--muted);transition:transform .15s}
+  .acc[open]>summary .arw{transform:rotate(180deg)}
+  .acc .body{padding:0 16px 14px}
+  .guide{font-weight:700;font-size:14px;margin-bottom:8px}
+  .checks{list-style:none;display:flex;flex-direction:column;gap:6px;font-size:14px;margin-bottom:10px}
+  .checks label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+  .checks input{margin-top:5px;accent-color:var(--accent)}
+  .checks li.key span{font-weight:700}
+  .checks input:checked+span{color:var(--muted);text-decoration:line-through}
+  .script{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;white-space:pre-line}
+  /* 예시 멘트: 상담자가 고쳐 쓸 수 있어요 */
+  .script[contenteditable]{cursor:text;background:#fff;border-color:var(--line-strong);min-height:64px;transition:border-color .15s,box-shadow .15s}
+  .script[contenteditable]:hover{border-color:#9fb6e8}
+  .script[contenteditable]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .script-h{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px;color:var(--muted)}
+  .script-h b{font-size:13px;color:var(--sub)}
+  .script-h .edited{font-size:11px;font-weight:700;border-radius:4px;padding:0 6px;background:var(--accent-soft);color:var(--accent)}
+  .script-tools{display:flex;justify-content:flex-end;gap:12px;margin-top:6px}
+  .script-tools .linkish[disabled]{color:var(--muted);cursor:default}
+  .tpl-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  textarea{width:100%;border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;font-size:14px;resize:vertical;min-height:84px}
+  .sms-meta{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-top:4px}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .btn{border-radius:8px;padding:10px 12px;font-weight:700;border:1px solid var(--line-strong);background:#fff;min-height:44px}
+  .btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.sm{min-height:0;padding:4px 10px;font-size:13px}
+  .record{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px}
+  .record label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--sub)}
+  .record select,.record input{border:1px solid var(--line-strong);border-radius:6px;padding:6px 8px;font-size:14px;background:#fff}
+  .record .full{grid-column:1/-1}
+  .links{font-size:13px;color:var(--sub);display:flex;flex-direction:column;gap:3px}
+  /* 정부 지원금 (정부 고시 기준 CSV) */
+  .gov h4{font-size:13px;color:var(--sub);margin:2px 0 6px}
+  .gov-sub{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--soft);margin-bottom:12px}
+  .gov-sub .facts,.gov-card .facts{font-size:13px}
+  .gov-list{display:flex;flex-direction:column;gap:8px}
+  .gov-card{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--soft)}
+  .gov-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;font-size:14px}
+  .gov-h b{margin-right:2px}
+  .gov-tag{font-size:11px;font-weight:700;border-radius:4px;padding:0 6px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+  .gov-card a.linkish{display:inline-block;margin-top:6px;text-decoration:none}
+  .gov-calc{padding:8px 0;border-top:1px solid var(--line)}
+  .gov-calc:first-of-type{border-top:0;padding-top:0}
+  .gov-calc-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:14px;margin-bottom:4px}
+  .gov-calc label{font-size:13px;color:var(--sub);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+  .gov-calc select{border:1px solid var(--line-strong);border-radius:6px;padding:3px 6px;background:#fff}
+  .gov-calc input{width:110px;border:1px solid var(--line-strong);border-radius:6px;padding:3px 6px;text-align:right;background:#fff}
+  .gov-out dd{text-align:right;font-variant-numeric:tabular-nums}
+
+  /* 수온 예측 */
+  .fc-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,.7fr);gap:16px;align-items:start;margin-bottom:16px}
+  .fc-side{display:grid;gap:16px}
+  .reg-pick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--sub);margin:2px 0 8px}
+  .legend i{display:inline-block;width:20px;border-top:3px solid var(--accent);vertical-align:middle;margin-right:6px}
+  .legend .om i{border-top:3px dashed var(--om)}
+  .legend .th i{border-top:2px dashed var(--th28)}
+  .chart{overflow-x:auto}
+  .chart svg{display:block;width:100%;min-width:560px;height:auto}
+  .g-line{stroke:#e8ecf1;stroke-width:1}
+  .g-txt{fill:var(--muted);font-size:11px}
+  .g-band{fill:#f4f6f9}
+  .g-head{font-size:11px;font-weight:700}
+  .g-head.r{fill:var(--accent)} .g-head.o{fill:var(--muted)}
+  .th25{stroke:var(--th25);stroke-width:1.6;stroke-dasharray:6 6}
+  .th28{stroke:var(--th28);stroke-width:1.6;stroke-dasharray:6 6}
+  .th25t{fill:#8a6d00;font-size:10px} .th28t{fill:#a8500a;font-size:10px}
+  .s-roms{stroke:var(--accent);fill:none;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+  .s-om{stroke:var(--om);fill:none;stroke-width:3;stroke-dasharray:7 5;stroke-linejoin:round}
+  .pt{stroke:#fff;stroke-width:2;cursor:pointer}
+  .pt.r{fill:var(--accent)} .pt.o{fill:var(--om)}
+  .pick{border:1px solid var(--line);border-radius:8px;background:var(--soft);padding:10px 12px;font-size:13px;margin-top:8px}
+  .mini{list-style:none;display:flex;flex-direction:column;gap:7px;font-size:14px}
+  .mini li{display:flex;justify-content:space-between;gap:10px}
+  .mini li span{color:var(--muted)}
+  .tables{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .tables h3{font-size:13px;margin-bottom:6px;color:var(--sub)}
+  td.num,th.num{text-align:right}
+
+  /* 고객 상담 현황 */
+  .search{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+  .search label{font-size:13px;color:var(--sub);font-weight:700}
+  .search input{flex:1;min-width:0;max-width:440px;border:1px solid var(--line-strong);border-radius:8px;padding:9px 12px;font-size:15px;background:#fff}
+  .stack{display:grid;gap:16px}
+  .hist-res{font-weight:700;white-space:nowrap}
+
+  .foot{margin-top:18px;font-size:12px;color:var(--muted);line-height:1.7}
+  .foot a{color:inherit;font-weight:700;text-decoration:none}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1d2330;color:#fff;border-radius:8px;padding:10px 16px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw}
+  .toast.on{opacity:1}
+
+  /* ===== 보완판 추가 ===== */
+  .chg{display:none;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;line-height:1;vertical-align:middle;margin:0 4px;box-shadow:0 0 0 2px #fff}
+  body.show-chg .chg{display:inline-flex}
+  body.show-chg .chg-box{outline:2px dashed #a78bfa;outline-offset:2px;border-radius:8px}
+  .ghost[aria-pressed="true"]{background:#f3edff;border-color:#a78bfa;color:#5b21b6;font-weight:700}
+  .kpis{grid-template-columns:repeat(5,1fr)}
+  .alert-tag{font-size:12px;font-weight:700;border-radius:6px;padding:1px 6px;margin-top:3px;align-self:flex-start}
+  .alert-tag.on{background:var(--alert);color:#fff}
+  .alert-tag.off{background:#eef0f4;color:var(--sub)}
+  /* 수온·특보 토글 (보험 아래로 내림 · 기본 접힘) */
+  .b-temp{padding:0}
+  .b-temp>summary{list-style:none;cursor:pointer;padding:11px 16px;display:flex;align-items:center;gap:10px;font-size:14px}
+  .b-temp>summary::-webkit-details-marker{display:none}
+  .b-temp>summary:hover{background:#f8fafd}
+  .b-temp>summary .t{font-weight:700;font-size:13px;color:var(--sub);white-space:nowrap}
+  .b-temp>summary .s{flex:1;min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .b-temp>summary .arw{color:var(--muted);transition:transform .15s}
+  .b-temp[open]>summary .arw{transform:rotate(180deg)}
+  .b-temp>summary .al-on{color:#b42318;font-weight:700}
+  .b-temp-body{padding:0 16px 12px}
+  .alert-box{border-radius:8px;padding:8px 10px;font-size:13px;margin-top:8px}
+  .alert-box.on{background:var(--alert-soft);color:#7a1a12;border:1px solid #f5c2bd}
+  .alert-box.off{background:var(--normal-soft);color:#24533a;border:1px solid #c3e2cd}
+  .pts{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+  .pts i{font-style:normal;font-size:11px;background:#f1f3f7;color:var(--sub);border-radius:4px;padding:0 5px;white-space:nowrap}
+  .pts i.minus{background:#fdeaea;color:var(--alert)}
+  .pts b{font-size:11px;color:var(--text);padding:0 2px}
+  .rule{margin-top:8px;font-size:13px}
+  .rule summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:12px}
+  .rule table{margin-top:6px;border:1px solid var(--line)}
+  .rule td{padding:5px 8px;font-size:12px}
+  .bulk{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;background:#fafbfc;border-bottom:1px solid var(--line);font-size:13px;color:var(--sub)}
+  .bulk .btn{min-height:0;padding:5px 12px;font-size:13px}
+  .bulk .btn:disabled{opacity:.45;cursor:not-allowed}
+  td.ck,th.ck{width:30px;padding-right:0}
+  td.ck input,th.ck input{width:16px;height:16px;accent-color:var(--accent)}
+  .tag-why{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:0 5px;margin-left:4px;background:#fff1b8;color:#7a5a00;white-space:nowrap}
+  .need{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:0 5px;margin-left:4px;background:#fff1b8;color:#7a5a00;white-space:nowrap}
+  .consent-y{color:var(--normal);font-weight:700}
+  .consent-n{color:var(--alert);font-weight:700}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .next{display:block;font-size:11px;color:var(--warn);margin-top:2px;white-space:nowrap}
+  .calc .src{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-4px}
+  .main{grid-template-columns:minmax(0,1.75fr) minmax(340px,1fr)}
+  .who b,.who small,#rows td:nth-child(5){white-space:nowrap}
+  .who small{display:block}
+  #rows td{padding:9px 7px}
+  #rows td.reason{min-width:210px}
+  @media (max-width:1240px){.kpis{grid-template-columns:repeat(3,1fr)}}
+
+  /* ===== 홈 상단: 수온 그래프 · 해당 지역 수온 · 오늘 연락할 어가 ===== */
+  .home-top{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(190px,.6fr) minmax(250px,.75fr);gap:12px;margin:18px 0 16px;align-items:stretch}
+  .home-top>.panel{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+  .home-top .sec-h{margin:0}
+  .home-top .reg-pick{margin:0;gap:5px}
+  .home-top .chip{padding:2px 9px;font-size:12.5px}
+  .chart.sm svg{min-width:420px}
+  .temp-now{display:flex;flex-direction:column;gap:6px}
+  .temp-now .rg{font-size:14px;font-weight:700;color:var(--sub)}
+  .temp-now .tp{font-size:34px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+  .temp-now .mini{gap:5px;font-size:13px}
+  .temp-now .alert-tag{margin-top:2px}
+  .temp-now .badge{align-self:flex-start}
+  .kpis.kpi-list{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0}
+  .kpi-list .kpi{padding:7px 10px}
+  .kpi-list .kpi b{font-size:20px}
+  .kpi-list .kpi span{font-size:12px;line-height:1.3;display:block}
+  .kpi-list .kpi.hl{grid-column:1/-1;display:flex;align-items:baseline;gap:10px}
+  .kpi-list .kpi.hl b{font-size:24px}
+
+  /* 일괄 안내 문자 */
+  .bp{display:flex;flex-direction:column;gap:10px}
+  .bp h4{font-size:13px;color:var(--sub)}
+  .bp-count{font-size:15px}
+  .bp-count b{font-size:20px}
+  .bp-picked{display:flex;flex-wrap:wrap;gap:5px}
+  .bp-picked button{border:1px solid var(--line-strong);background:var(--soft);border-radius:999px;padding:2px 9px;font-size:12.5px}
+  .bp-picked button.no{border-color:#f5b5ae;color:var(--alert);background:var(--alert-soft)}
+  .bp textarea[readonly]{background:var(--soft);color:var(--sub)}
+  .btn.full{width:100%}
+
+  /* 어가 상세: 왼쪽 브리핑(수온·보험) · 오른쪽 상담 진행(확인 사항~) */
+  .detail-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,1fr);gap:16px;align-items:start}
+  .detail-side{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto}
+  .detail-side .actions{grid-template-columns:1fr}
+  .page-h .ghost{align-self:center}
+  .hh-pick{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--sub);white-space:nowrap}
+  .hh-pick select{border:1px solid var(--line-strong);border-radius:8px;padding:5px 8px;background:#fff;max-width:320px}
+  .src-tag{font-size:11px;font-weight:700;border-radius:4px;padding:0 6px;background:#eef0f4;color:var(--sub);white-space:nowrap}
+  .src-tag.live{background:var(--normal-soft);color:var(--normal)}
+  .tnow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:stretch;margin-bottom:6px}
+  .tnow>div{border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;flex-direction:column;gap:2px;background:#fff}
+  .tnow .lbl{font-size:12px;color:var(--muted);font-weight:700}
+  .tnow .big{font-size:36px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+  .tnow .badge{align-self:flex-start}
+  .tnow-stat b{font-size:22px;line-height:1.2;font-variant-numeric:tabular-nums}
+  .tnow-stat small{font-size:12px;color:var(--muted)}
+  @media (max-width:640px){.tnow{grid-template-columns:1fr 1fr}.tnow-main{grid-column:1/-1}}
+  .wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:8px 0 4px}
+  .wk div{min-width:0;overflow:hidden}
+  @media (max-width:640px){.wk .wd{display:none}.hh-pick{margin-left:0;width:100%}.hh-pick select{flex:1;min-width:0;max-width:none}.wk{gap:2px}.wk div small{font-size:9.5px;white-space:nowrap}.wk div b{font-size:12px}}
+  .wk div{border:1px solid var(--line);border-radius:6px;padding:4px 2px;text-align:center;font-size:12px;background:#fff}
+  .wk div b{display:block;font-size:14px;font-variant-numeric:tabular-nums}
+  .wk div small{color:var(--muted);font-size:11px}
+  .wk div.s1{background:#fff8d6;border-color:#f0d873}.wk div.s2{background:#fde3c6;border-color:#f3b77a}.wk div.s3{background:var(--alert-soft);border-color:#f5b5ae}
+  .ins-pend{background:var(--watch-soft);color:var(--watch);border-color:#b9d0f1}
+  .rec{margin-top:8px;border-radius:8px;padding:8px 10px;font-size:13px;border:1px solid var(--line);background:#fff}
+  .rec b{display:block;font-size:14px;margin-bottom:2px}
+  .rec ul{margin:2px 0 0 16px}
+  .rec.high{border-color:#f5b5ae;background:#fff6f5}.rec.mid{border-color:#f0d873;background:#fffbea}.rec.low{border-color:#a9dcb9;background:#f3fbf5}
+  .est{margin-top:8px;font-size:13px}
+  .est summary{cursor:pointer;color:var(--accent);font-weight:700}
+  .est-f{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:end;margin-top:6px}
+  .est-f label{display:flex;flex-direction:column;font-size:12px;color:var(--sub)}
+  .est-f input{width:96px;border:1px solid var(--line-strong);border-radius:6px;padding:3px 6px;text-align:right;background:#fff}
+  .est-out{margin-top:6px;font-size:13px}
+  .sc{margin-top:4px;border:1px solid var(--line)}
+  .sc-h{display:block;font-size:14px;margin-bottom:2px}.sc-cmp{border:1px solid #f5b5ae;background:#fffafa;border-radius:8px;padding:8px 10px}.sc-cmp .sc{background:#fff}.sc td.ng{font-weight:700}.sc th,.sc td{padding:4px 8px;font-size:12.5px}
+  .hist-list{list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px}
+  .hist-list li{border-bottom:1px dashed var(--line);padding-bottom:5px}
+  .loading{padding:30px 16px;text-align:center;color:var(--muted)}
+  @media (max-width:1240px){.home-top{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.home-top>.fc-card{grid-column:1/-1}}
+  @media (max-width:640px){.home-top{grid-template-columns:1fr}}
+
+  @media (max-width:1240px){.regions{grid-template-columns:repeat(4,1fr)}}
+  @media (max-width:1100px){.main,.fc-grid,.detail-grid{grid-template-columns:1fr}.detail-side{position:static;max-height:none}}
+  @media (max-width:900px){
+    .tables{grid-template-columns:1fr}
+  }
+  @media (max-width:640px){
+    .wrap{padding:0 16px 32px}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .regions{grid-template-columns:repeat(2,1fr)}
+    .col-sale,.col-st{display:none}
+    .actions,.record{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){.acc>summary .arw,.region,.toast{transition:none}}
+  .notice{margin:12px 0 0;padding:10px 12px;border-radius:8px;font-size:14px;background:var(--warn-soft);color:#7a3d06;border:1px solid #f3d3ad;white-space:pre-line}
+  /* 계약별 보험: 어종이 2개 이상이면 탭으로 한 장씩 */
+  .sl-bar{display:flex;align-items:center;gap:6px;margin:2px 0 8px;flex-wrap:wrap}
+  .sl-tabs{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+  .sl-tab{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-strong);background:#fff;border-radius:999px;padding:3px 12px;font-size:13px;font-weight:700;color:var(--sub);cursor:pointer}
+  .sl-tab i{display:inline-block;width:8px;height:8px;border-radius:50%;padding:0;border:0;min-width:0;font-size:0;line-height:0}
+  .sl-tab[aria-selected="true"]{background:var(--text);border-color:var(--text);color:#fff}
+  .sl-n{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:38px;text-align:right}
+  .sl-nav{border:1px solid var(--line-strong);background:#fff;border-radius:8px;width:30px;height:28px;font-size:16px;line-height:1;cursor:pointer}
+  .sl-nav:disabled{opacity:.35;cursor:default}
+  .ctr-card[hidden]{display:none}
+  /* 계약별 보험: 항목을 표처럼 보여 주고 제목은 굵게 */
+  .ctr-card .facts{gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff;font-size:13.5px}
+  .ctr-card .facts dt{font-weight:700;color:var(--text);background:var(--soft);padding:8px 12px;white-space:nowrap;border-top:1px solid var(--line)}
+  .ctr-card .facts dd{padding:8px 12px;border-top:1px solid var(--line);border-left:1px solid var(--line);min-width:0}
+  /* 고수온 보장 줄: 연한 빨강 (저수온 파랑과 짝) */
+  .ctr-card .facts dt.heat{background:#fdecea;color:#9b2c1f}
+  .ctr-card .facts dd.heat{background:#fff6f5}
+  /* 저수온 보장 줄: 파란색으로 고수온과 구분 */
+  .ctr-card .facts dt.cold{background:#e8f1fe;color:#1849a9}
+  .ctr-card .facts dd.cold{background:#f3f8ff;color:#1e3a6e}
+  .cold-ok{color:#1849a9;font-weight:700}
+  .cold-ng{color:#1849a9;font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+  .ctr-card .facts dt:first-of-type,.ctr-card .facts dd:first-of-type{border-top:0}
+  .ctr-card .facts .more{margin-top:2px;font-size:12px}
+  .ctr-card .facts .more summary{color:var(--accent);cursor:pointer;font-weight:400;list-style:none}
+  .ctr-card .facts .more summary::-webkit-details-marker{display:none}
+  .ctr-card .facts .more p{color:var(--muted);margin-top:2px}
+  /* 피해 정도별 예상 보험금 막대 (막대 전체 = 손해액) */
+  .sc-ins{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px}
+  .scb-h{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700}
+  .scb-sub{font-size:12px;color:var(--muted);margin:2px 0 8px}
+  .scb-lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--sub);margin-bottom:8px}
+  .scb-lg i{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  .scb-row{display:grid;grid-template-columns:40px 1fr;gap:8px;align-items:center;margin-bottom:6px}
+  .scb-row > span{font-size:13px}
+  .scb-line{display:flex;align-items:center;gap:8px;min-width:0}
+  .scb-bar{display:flex;height:22px;border-radius:3px;overflow:hidden;flex:none}
+  .scb-bar .p{background:#2f8f5b}.scb-bar .d{background:#c9ced8}
+  .scb-val{font-size:12.5px;white-space:nowrap;color:var(--muted)}
+  .scb-val b{color:#2f8f5b;font-size:13.5px}
+</style>
+<link rel="stylesheet" href="shell.css">
+<link rel="stylesheet" href="figma-theme.css">
+</head>
+<body>
+
+<script src="shell.js" data-part="header"></script>
+
+<div class="shell">
+  <script src="shell.js" data-part="nav" data-page="detail"></script>
+
+  <main class="wrap">
+    <p class="notice" id="notice" role="alert" hidden></p>
+
+    <!-- ===== 상담 홈 ===== -->
+    <section id="page-home" data-page-section="home" hidden>
+      <div class="home-top">
+        <section class="panel fc-card" aria-labelledby="h-hfc">
+          <div class="sec-h"><h3 id="h-hfc">수온 예측</h3><p id="home-fc-sub"></p></div>
+          <div class="chart sm" id="home-chart"></div>
+        </section>
+        <section class="panel temp-now" id="home-temp" aria-label="선택 지역 수온"></section>
+        <section class="panel" aria-labelledby="h-kpi">
+          <div class="sec-h"><h3 id="h-kpi">오늘 연락할 어가</h3></div>
+          <div class="kpis kpi-list">
+            <div class="kpi hl"><b id="k-left">0</b><span>안내 필요 (미연락·부재)</span></div>
+            <div class="kpi"><b id="k-all">0</b><span>오늘 연락 대상</span></div>
+            <div class="kpi"><b id="k-pre">0</b><span>특보 전 연락 완료</span></div>
+            <div class="kpi"><b id="k-book">0</b><span>상담 예약</span></div>
+            <div class="kpi"><b id="k-win">0</b><span>가입 전환 (계약)</span></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="main">
+        <section class="panel" aria-labelledby="h-list">
+          <div class="list-h">
+            <div class="sec-h" style="margin:0">
+              <h3 id="h-list">연락 순서</h3>
+              <p>어가를 누르면 상세로 이동해요 · 체크하면 오른쪽에서 문자를 한 번에 보내요</p>
+            </div>
+            <div class="filters" id="filters" role="group" aria-label="목록 거르기"></div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th scope="col" class="ck"><input type="checkbox" id="ck-all" aria-label="보이는 어가 모두 선택"></th>
+                <th scope="col">순위</th><th scope="col">어가</th><th scope="col">위험 · 어종 기준</th>
+                <th scope="col">계약별 보험</th>
+                <th scope="col" class="col-st">상태</th>
+              </tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="empty" hidden>조건에 맞는 어가가 없어요.</div>
+        </section>
+
+        <aside class="panel" id="bulk-panel" aria-labelledby="h-bulk">
+          <div class="list-h"><div class="sec-h" style="margin:0"><h3 id="h-bulk">일괄 안내 문자</h3><p>목록에서 체크한 어가에 한 번에 보내요</p></div></div>
+          <div class="panel-in bp">
+            <div class="bp-count" id="bulk-n"></div>
+            <div class="bp-picked" id="bulk-picked"></div>
+            <h4>문자 종류 (공통 문구)</h4>
+            <div class="tpl-tabs" id="bulk-tpl" role="group" aria-label="일괄 문자 종류"></div>
+            <textarea id="bulk-preview" aria-label="일괄 문자 내용"></textarea>
+            <p class="note" id="bulk-note"></p>
+            <button type="button" class="btn pri full" id="bulk-sms" disabled>✉️ 선택한 어가에 일괄 발송</button>
+            <p class="note">수신 미동의 어가는 자동으로 빠지고 전화 목록에 남아요 · 시연이라 실제로 발송되지 않아요</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ===== 어가 상세 ===== -->
+    <!-- 데이터를 받기 전에도 어가 상세가 먼저 보이게 (홈 영역의 수온 예측 카드가 잠깐 비치지 않도록) -->
+    <section id="page-detail" data-page-section="detail">
+      <div class="page-h"><button type="button" class="ghost" id="back-home">← 연락 목록</button><h2>어가 상세</h2>
+        <label class="hh-pick" id="hh-pick-wrap" hidden>어가 선택 <select id="hh-pick" aria-label="어가 선택"></select></label></div>
+      <div class="detail-grid">
+        <article class="panel" id="brief" aria-label="어가 브리핑 (수온 · 계약별 보험)"></article>
+        <aside class="panel detail-side" id="brief-side" aria-label="상담 진행 (확인 사항 · 전화 · 결과 기록)"></aside>
+      </div>
+    </section>
+
+    <!-- ===== 수온 예측 ===== -->
+    <section id="page-forecast" data-page-section="forecast" hidden>
+      <div class="page-h"><h2>수온 예측</h2><p>담당 지역 기준 · 지역은 맨 위 '담당'에서 바꿔요 · 1~7일은 대응 판단, 8~21일은 흐름 참고만 해요</p></div>
+      <div class="fc-grid">
+        <section class="panel panel-in" aria-labelledby="h-fc">
+          <div class="sec-h"><h3 id="h-fc">21일 수온 추이</h3><p id="fc-sub"></p></div>
+          <div class="legend">
+            <span><i></i>ROMS 1~7일 · 대응 검토</span>
+            <span class="om"><i></i>ECMWF 보정 8~21일 · 참고만</span>
+            <span class="th"><i></i>기준선 25℃ · 28℃</span>
+          </div>
+          <div class="chart" id="fc-chart"></div>
+          <div class="pick" id="fc-pick" aria-live="polite"></div>
+          <p class="note" style="margin-top:8px">ECMWF 보정값으로는 위험 단계·연락 대상·보험금 지급 여부를 판단하지 않아요. ROMS도 관측값이 아닌 모델 예측값이에요.</p>
+        </section>
+        <div class="fc-side">
+          <section class="panel panel-in" aria-labelledby="h-fcs">
+            <div class="sec-h"><h3 id="h-fcs">단기 예상 위험 요약</h3><p>선택 지역 · 앞으로 7일</p></div>
+            <ul class="mini" id="fc-summary"></ul>
+          </section>
+          <section class="panel panel-in" aria-labelledby="h-fcc">
+            <div class="sec-h"><h3 id="h-fcc">판정 참고 기준</h3></div>
+            <ul class="mini">
+              <li><span>관심 (예비특보 수준)</span><b>25℃ 도달 예상</b></li>
+              <li><span>주의 (주의보 수준)</span><b>28℃ 도달 예상</b></li>
+              <li><span>경보</span><b>28℃ 이상 3일 연속</b></li>
+            </ul>
+            <p class="note" style="margin-top:8px">예보값에 적용한 앱 자체 판정이에요. 수과원 공식 특보 기준과 같은지는 <span class="need">출처 확인 중</span><span class="chg">8</span> 공식 특보는 수과원 발표로 확인하세요.</p>
+            <div class="sec-h" style="margin-top:14px"><h3>어종별 견디는 한계 수온</h3></div>
+            <ul class="mini" id="fc-species"></ul>
+            <p class="note" style="margin-top:8px">국립수산과학원(2024.7.19) 자료. 그 밖의 어종은 자료를 확보하면 추가해요.</p>
+          </section>
+        </div>
+      </div>
+      <section class="panel panel-in" aria-labelledby="h-fct">
+        <div class="sec-h"><h3 id="h-fct">예측 상세 값</h3><p>날짜별 모델값 · 최고 / 평균 / 최저 수온</p></div>
+        <div class="tables" id="fc-tables"></div>
+      </section>
+    </section>
+
+    <!-- ===== 고객 상담 현황 ===== -->
+    <section id="page-consult" data-page-section="consult" hidden>
+      <div class="page-h"><h2>고객 상담 현황</h2><p>상담 홈에서 저장한 결과가 바로 쌓여요</p></div>
+      <div class="search">
+        <label for="q">검색</label>
+        <input id="q" type="search" placeholder="이름, 전화번호 뒷자리, 어종 (예: 김, 1203, 조피볼락)" autocomplete="off">
+        <span class="note" id="q-count"></span>
+      </div>
+      <div class="stack">
+        <section class="panel" aria-labelledby="h-cust">
+          <div class="list-h"><div class="sec-h" style="margin:0"><h3 id="h-cust">고객 목록</h3><p>고객을 누르면 아래 상담 내역이 그 고객만 보여요</p></div></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th scope="col">고객</th><th scope="col">연락처</th><th scope="col">수신 동의<span class="chg">5</span></th><th scope="col">지역</th><th scope="col">계약별 보험</th>
+                <th scope="col">위험</th><th scope="col">현재 상태</th><th scope="col">최근 연락</th><th scope="col" class="num">상담</th><th scope="col"><span class="note">브리핑</span></th>
+              </tr></thead>
+              <tbody id="cust-rows"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="cust-empty" hidden>검색 결과가 없어요. 이름 한 글자나 전화번호 뒷자리로 찾아보세요.</div>
+        </section>
+        <section class="panel" aria-labelledby="h-hist">
+          <div class="list-h">
+            <div class="sec-h" style="margin:0"><h3 id="h-hist">과거 상담 내역</h3><p id="hist-sub">최근 순</p></div>
+            <div class="filters" id="hist-filter"></div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th scope="col">날짜</th><th scope="col">고객</th><th scope="col">지역 · 어종</th><th scope="col">결과</th><th scope="col">내용</th></tr></thead>
+              <tbody id="hist-rows"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="hist-empty" hidden>상담 내역이 없어요.</div>
+        </section>
+      </div>
+    </section>
+
+    <p class="foot">
+      위험 단계는 앱 기준(관심 25℃ · 주의 28℃ · 경보 28℃ 이상 3일)으로 판정한 참고값이며, 공식 특보나 보험금 지급 기준이 아닙니다(Weather data by Open-Meteo.com).<br>
+      문의 · 수협중앙회 경남지역본부 <a href="tel:0552891124">055-289-1124</a> · 수협은행 경남지역본부 <a href="tel:0556030466">055-603-0466</a>
+    </p>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ===== 데이터 연결 ===== */
+const DATA_API_BASE = (location.protocol === 'file:' ? 'http://127.0.0.1:8000'
+  : location.port === '8765' ? `${location.protocol}//${location.hostname}:8000`
+  : location.origin);   // 배포(Render) 등 백엔드가 화면을 같이 내보낼 때는 같은 주소
+const ENDPOINTS = {
+  regions: '/api/dashboard/regions',
+  farms:   '/api/consult/customers',
+  logs:    '/api/consult/logs',
+};
+let mode = 'sample';   // 'db' = 서버 데이터 · 'sample' = 가상 데이터
+
+const esc = value => String(value).replace(/[&<>"']/g, char => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
+}[char]));
+
+async function getJSON(path){
+  const res = await fetch(DATA_API_BASE + path);
+  if(!res.ok) throw new Error(`${path} HTTP ${res.status}`);
+  return res.json();
+}
+// 쓰기 요청은 백엔드 규칙상 X-CSRF-Protection: 1 헤더가 필요해요
+async function postJSON(path, body){
+  const res = await fetch(DATA_API_BASE + path, {method:'POST', headers:{'Content-Type':'application/json', 'X-CSRF-Protection':'1'}, body:JSON.stringify(body)});
+  if(!res.ok){
+    let msg = `HTTP ${res.status}`;
+    try{ const j = await res.json(); if(j.detail) msg += ' · ' + (typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)); }catch(e){}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+function addNotice(msg){
+  const n = document.getElementById('notice');
+  n.textContent = n.hidden ? msg : n.textContent + '\n' + msg;
+  n.hidden = false;
+}
+function setMode(ok, err){
+  mode = ok ? 'db' : 'sample';
+  document.getElementById('data-mode').textContent = ok ? 'DB 연결됨' : '가상 데이터 · 서버 연결 실패';
+  document.getElementById('updated').textContent = ok ? `마지막 조회 ${Shell.lastViewed()}` : '2026.10.22 (목) 06:00 기준';
+  document.getElementById('reset').hidden = ok;   // 홈과 같이 가상 데이터일 때만 보여요
+  if(!ok) addNotice(location.protocol === 'file:'
+    ? '⚠️ 파일로 열면 서버에 연결할 수 없어 가상 데이터를 보여 주고 있어요. sea_temperature 폴더에서 python -m http.server 8765 를 켜고 http://localhost:8765/farm_detail.html 로 열어 주세요.'
+    : `⚠️ 서버에 연결하지 못해 가상 데이터를 보여 주고 있어요. 백엔드(8000 포트)가 켜져 있는지 확인해 주세요. (${err.message})`);
+}
+
+/* ===== 기본 값 ===== */
+let TODAY = {y:2026, m:10, d:22};   // 예측 기준일 · 서버 연결 시 regions 응답의 base_date로 바뀌어요
+const STAGE = ['정상','관심','주의','경보'];
+const STAGE_ICON = ['○','◐','▲','■'];
+const STAGE_PTS = [0,10,20,30];
+const WEEK = ['일','월','화','수','목','금','토'];
+const dayOf = i => new Date(TODAY.y, TODAY.m - 1, TODAY.d + i);
+const md = i => { const d = dayOf(i); return `${d.getMonth()+1}/${d.getDate()}`; };
+const mdw = i => `${md(i)}(${WEEK[dayOf(i).getDay()]})`;
+const r1 = v => Math.round(v * 10) / 10;
+
+// 1~7일 일최고(ROMS, 가상) · 2~3주 흐름 · ECMWF 지역별 보정(가상)
+// bias.diff = 유럽(ECMWF) 예측 − ROMS 평균 차이(10/22 비교). own=false면 지역 자료가 없어 평균값 사용.
+// alert = 수과원 공식 특보(가상 예시). 실제로는 수과원 발표를 옮겨 적거나 연동.
+const REGIONS = [
+  {id:'통영', t:[27.6,27.8,27.9,28.1,28.0,27.7,27.4], trend:'flat', bias:{diff:-1.4, own:false}, alert:null},
+  {id:'거제', t:[26.9,27.1,27.3,27.4,27.2,27.0,26.8], trend:'flat', bias:{diff:-0.4, own:true},  alert:null},
+  {id:'고성', t:[27.2,27.3,27.5,27.6,27.4,27.1,26.9], trend:'flat', bias:{diff:-0.9, own:true},  alert:{type:'고수온 예비특보', since:'10/21'}},
+  {id:'남해', t:[25.8,25.9,26.0,26.1,25.9,25.7,25.5], trend:'down', bias:{diff:-2.0, own:true},  alert:null},
+  {id:'하동', t:[24.6,24.5,24.4,24.3,24.1,24.0,23.8], trend:'down', bias:{diff:-1.4, own:false}, alert:null},
+  {id:'창원', t:[25.1,25.3,25.4,25.4,25.2,25.0,24.9], trend:'down', bias:{diff:-1.4, own:false}, alert:null},
+  {id:'사천', t:[24.9,24.8,24.7,24.6,24.4,24.3,24.1], trend:'down', bias:{diff:-2.0, own:true},  alert:null},
+];
+const SAMPLE_REGIONS = {
+  base_date:'2026-10-22',
+  regions:REGIONS.map(region => ({
+    ...region,
+    series:region.t.map((max,i) => ({i,max,mean:max,min:max,src:'ROMS'})),
+  })),
+};
+// 저수온 모드 가상 값 (서버에 연결 못 했을 때만): 7일 일최저 · 1월 중순 예시
+const SAMPLE_COLD_SEED = [
+  {id:'통영', t:[9.8,9.4,9.1,8.7,8.5,8.6,8.8], trend:'down'}, {id:'거제', t:[10.4,10.1,9.9,9.6,9.4,9.5,9.6], trend:'flat'},
+  {id:'고성', t:[8.9,8.4,7.9,7.4,7.1,7.2,7.5], trend:'down'}, {id:'남해', t:[6.8,6.1,5.4,4.6,3.9,3.7,3.8], trend:'down', alert:{type:'저수온 주의보', since:'1/13'}},
+  {id:'하동', t:[6.5,5.9,5.2,4.4,3.8,3.6,3.7], trend:'down'}, {id:'창원', t:[8.2,7.8,7.3,6.9,6.6,6.7,6.9], trend:'flat'},
+  {id:'사천', t:[6.2,5.5,4.8,4.0,3.6,3.4,3.5], trend:'down', alert:{type:'저수온 주의보', since:'1/13'}},
+];
+function sampleSeriesCold(t, trend){
+  const roms = t.map((min,i) => ({i, max:r1(min+1.4), mean:r1(min+0.7), min, src:'ROMS'}));
+  const om = [];
+  for(let k = 1; k <= 14; k++){
+    const drift = trend === 'down' ? -0.05*k : trend === 'up' ? 0.08*k : 0;
+    const min = r1(t[6] + drift + 0.2*Math.sin(k/2));
+    om.push({i:6+k, max:r1(min+1.2), mean:r1(min+0.6), min, src:'ECMWF'});
+  }
+  return roms.concat(om);
+}
+const SAMPLE_COLD = {base_date:'2027-01-14', regions:SAMPLE_COLD_SEED.map(({t, ...r}) => ({bias:{diff:-1.2, own:true}, alert:null, ...r, series:sampleSeriesCold(t, r.trend)}))};
+const SAMPLE_REGIONS_FOR_MODE = () => Shell.M.hot ? SAMPLE_REGIONS : SAMPLE_COLD;
+// 위험 모드(고수온/저수온) 기준은 shell.js 공통 (Shell.M · Shell.stageOfDay)
+const MR = Shell.M;
+const stageOfDay = (t, i, values) => Shell.stageOfDay(t, i, values);
+let regionInfo = {};
+function applyRegions(data){
+  const [y,m,d] = data.base_date.split('-').map(Number);
+  TODAY = {y,m,d};
+  regionInfo = {};
+  data.regions.forEach(region => {
+    const series = region.series.slice().sort((a,b) => a.i - b.i);
+    const t = series.filter(point => point.src === 'ROMS').map(point => point[MR.key]);   // 고수온 = 일최고 · 저수온 = 일최저
+    if(!t.length) throw new Error(`지역 수온 자료가 없습니다: ${region.id}`);
+    const st = t.map((value,i,values) => stageOfDay(value,i,values));
+    const top = Math.max(...st), maxT = MR.hot ? Math.max(...t) : Math.min(...t);   // 7일 중 가장 위험한 값
+    regionInfo[region.id] = {...region,t,series,st,top,d:st.indexOf(top),maxT,dMax:t.indexOf(maxT)};
+  });
+}
+const biasQuality = d => { const a = Math.abs(d); return a < 0.5 ? '높음' : a < 1.5 ? '보통' : '낮음 · 흐름만 참고'; };
+const TREND = {up:'↗ 상승', flat:'→ 유지', down:'↘ 하강'};
+
+// 국립수산과학원(2024.7.19) 품종별 생존 상한. 자료 없는 어종은 지역 기준을 그대로 씀.
+const SPECIES_LIMIT = Shell.M.limits;   // 모드별 어종 기준 수온 (shell.js: 고수온 생존 상한 · 저수온 먹이 중단 수온)
+
+// 상품요약서·사업방법서(2026.5.13) 기준. 공개 자료에 없는 값은 비워 둠.
+const PRODUCTS = {
+  unknown:{name:'상품 확인 필요', heat:null, months:[], saleText:'확인 필요'},
+  cage:   {name:'해상가두리어류 재해보험', heat:'rider', base:'태풍·해일·풍랑·적조', rider:'고수온·저수온·이상수질', months:[1,2,3,4,5,10,11,12], saleText:'1~5·10~12월', subsidy:'일부', split4:true},
+  ascid:  {name:'멍게 보험', heat:'rider', months:[4,5,6,7,8,9,10], saleText:'4~10월', subsidy:'일부', split4:false, caution:'멍게는 상품요약서와 약관(제5조)의 고수온 보장 내용이 달라요. 약관 우선, 수협에 확인 필요'},
+  abaSea: {name:'해상 전복 보험', heat:'base', months:[1,2,3,4,5,10,11,12], saleText:'1~5·10~12월', subsidy:'50%', split4:true},
+  abaLand:{name:'육상수조식 전복 보험', heat:'rider', months:[1,2,3,4,5,10,11,12], saleText:'1~5·10~12월', subsidy:'일부', split4:false},
+  sqrt:   {name:'오만둥이 보험', heat:'base', months:[7,8,9,10,11], saleText:'7~11월', subsidy:'일부', split4:false},
+  oyster: {name:'굴 보험', heat:'rider', months:[11,12,1,2,3,4,5,6,7,8,9], saleText:'11월~다음 해 9월', subsidy:'50%', split4:false},
+};
+
+const INS = {
+  none:     {label:'미가입', cls:'ins ins-none', gap:20},
+  norider:  {label:'특약 없음', cls:'ins ins-gap', gap:10},
+  checkExcl:{label:'가입', cls:'ins ins-ok', gap:10},
+  unknown:  {label:'모름', cls:'ins ins-unk', gap:15},
+  full:     {label:'가입(특약 포함)', cls:'ins ins-ok', gap:0},
+};
+
+const STATUS = {
+  todo:'미연락', absent:'부재 · 다시 연락', sms:'문자 발송', book:'상담 예약',
+  win:'가입 완료', info:'안내 완료', hold:'보류 · 거절',
+};
+const STATUS_DB = {
+  todo:'미연락', absent:'부재·재연락', sms:'문자 발송', book:'상담 예약',
+  win:'가입 완료', info:'안내 완료', hold:'보류·거절',
+};
+const ACTIVE = ['todo','absent','sms'];
+
+// 어가 1곳 = 연락처 1개, items = 계약 목록(1어종 1계약)
+// ins: 가입 상태, quote: 가상 견적(만 원, 보험료 계산 API 연결 시 자동 입력), res: 계약 결과(win 가입 완료 · hold 보류)
+const FARMS0 = [
+  {id:'A-012', name:'김○○', region:'통영', phone:'010-****-1203', consent:true,  status:'todo', hist:[], items:[
+    {species:'조피볼락', method:'해상 가두리', p:'cage', ins:'none', quote:2400},
+    {species:'참돔',     method:'해상 가두리', p:'cage', ins:'norider', quote:900}]},
+  {id:'A-031', name:'박○○', region:'통영', phone:'010-****-3318', consent:true,  status:'todo', hist:[{at:'2026-05-14', result:'가입', text:'참돔 기본 보험만 가입 (창구 방문)'}], items:[
+    {species:'참돔', method:'해상 가두리', p:'cage', ins:'norider', quote:900}]},
+  {id:'A-044', name:'정○○', region:'통영', phone:'010-****-4410', consent:true,  status:'todo', hist:[{at:'2026-03-02', result:'가입', text:'해상 전복 보험 가입'}], items:[
+    {species:'전복', method:'해상 가두리', p:'abaSea', ins:'checkExcl', quote:null},
+    {species:'멍게', method:'수하식',     p:'ascid',  ins:'none', quote:700}]},
+  {id:'A-053', name:'임○○', region:'통영', phone:'010-****-5307', consent:false, status:'todo', hist:[], items:[
+    {species:'조피볼락', method:'해상 가두리', p:'cage', ins:'unknown', quote:null}]},
+  {id:'A-060', name:'배○○', region:'통영', phone:'010-****-6021', consent:true,  status:'book', next:'2026-10-24', hist:[{at:'2026-10-21', result:'상담 예약', text:'통화 · 견적 요청, 10/24 14:00 방문 상담'}], items:[
+    {species:'참돔', method:'해상 가두리', p:'cage', ins:'none', quote:1800}]},
+  {id:'A-071', name:'신○○', region:'통영', phone:'010-****-7190', consent:true,  status:'todo', hist:[], items:[
+    {species:'굴', method:'수하식', p:'oyster', ins:'none', quote:600}]},
+  {id:'A-082', name:'류○○', region:'통영', phone:'010-****-8236', consent:true,  status:'sms', hist:[{at:'2026-10-21', result:'문자 발송', text:'부재 → 판매 마감 안내 문자'}], items:[
+    {species:'멍게', method:'수하식', p:'ascid', ins:'none', quote:700}]},
+  {id:'A-027', name:'조○○', region:'통영', phone:'010-****-2716', consent:true,  status:'info', hist:[{at:'2026-10-21', result:'안내 완료', text:'통화 · 경보 시 의무(먹이 중단·선별 금지) 안내'}], items:[
+    {species:'감성돔', method:'해상 가두리', p:'cage', ins:'full', quote:null}]},
+  {id:'B-007', name:'이○○', region:'거제', phone:'010-****-0727', consent:true,  status:'absent', next:'2026-10-23', hist:[{at:'2026-10-21', result:'부재 · 다시 연락', text:'부재 → 10/23 재연락'}], items:[
+    {species:'멍게', method:'수하식', p:'ascid',  ins:'none', quote:800},
+    {species:'굴',   method:'수하식', p:'oyster', ins:'none', quote:500}]},
+  {id:'B-015', name:'강○○', region:'거제', phone:'010-****-1588', consent:true,  status:'todo', hist:[], items:[
+    {species:'볼락', method:'해상 가두리', p:'cage', ins:'unknown', quote:null}]},
+  {id:'C-019', name:'최○○', region:'고성', phone:'010-****-1955', consent:true,  status:'book', next:'2026-11-03', hist:[{at:'2026-09-30', result:'부재 · 다시 연락', text:'부재'},{at:'2026-10-20', result:'상담 예약', text:'통화 · 11월 판매 시작 후 상담 (11/3 10:00)'}], items:[
+    {species:'굴', method:'수하식', p:'oyster', ins:'none', quote:500}]},
+  {id:'C-003', name:'윤○○', region:'고성', phone:'010-****-0391', consent:false, status:'todo', hist:[], items:[
+    {species:'돌돔', method:'해상 가두리', p:'cage', ins:'none', quote:1500}]},
+  {id:'D-021', name:'한○○', region:'남해', phone:'010-****-2140', consent:true,  status:'absent', next:'2026-10-23', hist:[{at:'2026-10-21', result:'부재 · 다시 연락', text:'부재 (2회)'}], items:[
+    {species:'전복', method:'육상 수조', p:'abaLand', ins:'norider', quote:400}]},
+  {id:'E-008', name:'서○○', region:'창원', phone:'010-****-0862', consent:true,  status:'todo', hist:[], items:[
+    {species:'오만둥이', method:'수하식', p:'sqrt', ins:'none', quote:500}]},
+  {id:'F-002', name:'오○○', region:'하동', phone:'010-****-0225', consent:true,  status:'win', hist:[{at:'2026-08-11', result:'상담 예약', text:'창구 상담 예약'},{at:'2026-08-14', result:'가입 완료', text:'참돔 · 해상가두리어류 재해보험 + 고수온 특약'}], items:[
+    {species:'참돔', method:'해상 가두리', p:'cage', ins:'full', quote:null, res:'win'}]},
+];
+const withIds = list => list.map(f => ({household_id:null, ...f, items:f.items.map(c => ({mapping_id:null, ...c}))}));
+
+// 가상 데이터일 때만 이 브라우저에 저장 (상담 홈 ↔ 어가 상세가 같은 값을 봐요)
+const KEY = 'heat-dashboard-split-v1';
+function loadLocal(){ try{ const s = localStorage.getItem(KEY); if(s) return JSON.parse(s); }catch(e){} return null; }
+function save(){ if(mode !== 'sample') return; try{ localStorage.setItem(KEY, JSON.stringify(farms)); }catch(e){} }
+let farms = [];
+
+function toFarms(customers){
+  const statusKeys = {
+    '미연락':'todo', '부재·재연락':'absent', '문자 발송':'sms',
+    '상담 예약':'book', '가입 완료':'win', '안내 완료':'info', '보류·거절':'hold',
+  };
+  const coverageKeys = {none:'none', no_rider:'norider', covered:'full'};
+  return customers.map(customer => {
+    const householdId = Number(customer.code);
+    if(!Number.isSafeInteger(householdId) || householdId <= 0 || !Object.hasOwn(statusKeys, customer.status)){
+      throw new Error('어가 번호 또는 상담 상태를 확인해 주세요.');
+    }
+    return {
+      id:String(householdId), household_id:householdId,
+      name:customer.name, region:customer.region,
+      phone:customer.phone_masked, consent:customer.sms_consent,
+      status:statusKeys[customer.status], next:null, hist:[],
+      items:customer.contracts.map(contract => {
+        if(!Object.hasOwn(coverageKeys, contract.coverage)){
+          throw new Error('어가 보험 보장 상태를 확인해 주세요.');
+        }
+        return {
+          species:contract.species, ins:coverageKeys[contract.coverage],
+          p:'unknown', method:null, mapping_id:contract.mapping_id, quote:null,
+        };
+      }),
+    };
+  });
+}
+
+async function loadFarms(){
+  try{
+    const [rg, fm] = await Promise.all([getJSON(ENDPOINTS.regions), getJSON(ENDPOINTS.farms)]);
+    applyRegions(rg); farms = toFarms(fm); setMode(true);
+  }catch(e){
+    applyRegions(SAMPLE_REGIONS_FOR_MODE()); farms = loadLocal() || withIds(structuredClone(FARMS0)); setMode(false, e);
+  }
+  const miss = [...new Set(farms.filter(f => !regionInfo[f.region]).map(f => f.region))];
+  if(miss.length){
+    farms = farms.filter(f => regionInfo[f.region]);
+    addNotice(`⚠️ 수온 예측이 없는 지역이라 목록에서 뺀 어가가 있어요: ${miss.join(', ')}`);
+  }
+}
+
+// 상담 결과 저장: 서버 연결 시 POST /api/consult/logs (backend/backend/consult.py). 가상 데이터면 서버에 보내지 않아요.
+async function recordLog(f, {status, channel, memo, next, results = []}){
+  if(mode !== 'db') return;
+  await postJSON(ENDPOINTS.logs, {
+    household_id: f.household_id, status: STATUS_DB[status], channel,
+    memo: memo || null,
+    next_contact_at: next ? `${next}T09:00:00+09:00` : null,
+    items: results.filter(r => r.mapping_id).map(r => ({mapping_id:r.mapping_id, result:r.result})),
+  });
+}
+
+/* ===== 판정·계산 ===== */
+function speciesRisk(f){
+  const L = Shell.limitOf(f.species), R = regionInfo[f.region];
+  if(L == null) return {known:false, pts:0, stage:0, short:'기준 확인 필요', text:`${f.species} ${MR.hot ? '한계 수온' : '저수온 기준'} 자료 없음 · 지역 기준 적용`};
+  const d = R.t.findIndex(v => Shell.reach(v, L));
+  if(d >= 0) return {known:true, hit:true, L, d, pts:15, stage:2, short:`${L}℃ 도달 D-${d}`,
+    text:`${f.species} ${MR.limitWord} ${L}℃ · ${d === 0 ? '오늘' : d + '일 뒤'} 도달 예상`};
+  const gap = r1(MR.hot ? L - R.maxT : R.maxT - L);
+  return {known:true, hit:false, L, pts: gap <= 1 ? 8 : 0, stage:0, short:`${L}℃까지 ${gap.toFixed(1)}℃`,
+    text:`${f.species} ${MR.limitWord} ${L}℃ · 7일 ${MR.val}보다 ${gap.toFixed(1)}℃ 여유`};
+}
+function farmStage(f){ return Math.max(regionInfo[f.region].top, speciesRisk(f).stage); }
+
+function saleState(p){
+  if(p === 'unknown') return {code:'unknown', text:'판매 기간 확인 필요', cls:'sale-later'};
+  const m = TODAY.m, months = PRODUCTS[p].months;
+  if(months.includes(m)){
+    const next = m % 12 + 1;
+    return months.includes(next) ? {code:'open', text:'가능', cls:'sale-open'}
+                                 : {code:'soon', text:'이번 달 마감', cls:'sale-soon', end:m};
+  }
+  let k = m; for(let i=0;i<12;i++){ k = k % 12 + 1; if(months.includes(k)) break; }
+  return {code:'later', text:`${k}월부터`, cls:'sale-later', start:k};
+}
+
+/* ===== 연락 순서 (자동화 변수) =====
+   실제 서비스에서는 이 가중치를 n8n 자동화 쪽 설정값(변수)으로 두고, 순위만 계산해서 DB에 넣어요.
+   대시보드는 계산된 순위만 보여줘요. 아래는 시연용으로 같은 규칙을 브라우저에서 돌린 것이에요. */
+const PRIORITY = {
+  stage:   [0, 10, 30, 40],                                   // 정상·관심·주의·경보
+  perDay:  2,                                                 // 주의 도달이 하루 빠를수록 +2 (D-0 = +14)
+  gap:     {none:25, norider:20, unknown:15, checkExcl:10, full:0}, // 보험 공백
+  canBuy:  20,                                                // 지금 가입 가능 (이번 달 마감 포함)
+  species: 10,                                                // 7일 안 어종 한계 수온 도달
+};
+const alerted = f => !!regionInfo[f.region].alert;
+function score(f){
+  const R = regionInfo[f.region], S = speciesRisk(f), sale = saleState(f.p), st = farmStage(f), W = PRIORITY;
+  let t = W.stage[st];
+  if(st >= 2){ const d = R.top >= 2 ? R.d : S.d; t += Math.max(0, 7 - d) * W.perDay; }
+  t += W.gap[f.ins] || 0;
+  const canBuy = !['full','checkExcl'].includes(f.ins);
+  if(canBuy && !alerted(f) && ['open','soon'].includes(sale.code)) t += W.canBuy;  // 특보 발령 지역은 이번 피해 보상 불가라 0
+  if(S.hit) t += W.species;
+  return {total: t};
+}
+// 목록에 올리는 조건: 주의 이상 · 판매 마감 임박 · 공식 특보 발령 지역
+function why(f){
+  const st = farmStage(f), sale = saleState(f.p), gap = f.ins !== 'full';
+  if(st >= 2) return 'stage';
+  if(st >= 1 && alerted(f)) return 'alert';
+  if(st >= 1 && gap && sale.code === 'soon' && f.ins !== 'checkExcl') return 'soon';
+  return null;
+}
+
+function reason(f){
+  const r = regionInfo[f.region], sale = saleState(f.p), P = PRODUCTS[f.p];
+  if(alerted(f) && !['full','checkExcl'].includes(f.ins)) return `${r.alert.type} 발령 중 · 대응 안내 + 다음 대비 가입`;
+  if(f.ins === 'none'){
+    if(sale.code === 'later') return `${sale.start}월 판매 시작 안내`;
+    if(sale.code === 'soon') return `판매기간 ${sale.end}월 종료, 특보 전 가입 안내`;
+    if(r.top >= 2) return `${r.d}일 뒤 ${r.t[r.d].toFixed(1)}℃ 예상, 특보 전 가입 필요`;
+    return '특보 전 가입 안내';
+  }
+  if(f.ins === 'norider') return '기본만 가입, 고수온 미보장';
+  if(f.ins === 'checkExcl') return P.heat === 'base' ? '고수온 빼고 가입했는지 확인' : '고수온 특약 여부 확인';
+  if(f.ins === 'unknown') return '가입 여부·입식신고 확인';
+  return '경보 시 의무 안내';
+}
+
+function heatLine(f){
+  const P = PRODUCTS[f.p];
+  if(f.p === 'unknown') return {ok:f.ins === 'full' ? true : f.ins === 'norider' ? false : null,
+    text:f.ins === 'full' ? '고수온 보장 정보 있음 · 약관 조건 확인 필요' : '상품·특약 및 고수온 보장 조건 확인 필요'};
+  if(f.ins === 'full') return {ok:true, text:'고수온 보장 대상 (특약 포함 가입)'};
+  if(P.heat === 'base'){
+    if(f.ins === 'checkExcl') return {ok:null, text:'기본 보험에 고수온 포함 · 부담보 특약으로 뺐는지 확인 필요'};
+    return {ok:true, text:'기본 보험에 고수온 포함 (부담보 특약으로 뺄 수 있음)'};
+  }
+  if(f.ins === 'norider') return {ok:false, text:'고수온 미보장 · 고수온 특약을 추가해야 보장'};
+  return {ok:null, text:'고수온은 특약을 함께 넣어야 보장'};
+}
+
+function talkingPoints(f){
+  const r = regionInfo[f.region], sale = saleState(f.p), P = PRODUCTS[f.p], pts = [];
+  if(sale.code === 'unknown') pts.push({key:true, t:'보험 상품·양식 방식·판매 기간을 확인한 뒤 가입 가능 여부를 안내하세요.'});
+  if(f.ins === 'none' || f.ins === 'unknown' || f.ins === 'norider'){
+    if(r.alert) pts.push({key:true, t:`${r.alert.type}가 이미 발령(${r.alert.since})돼서 지금 가입해도 이번 고수온 피해는 보상되지 않아요 → 대응 요령 안내 후 다음 판매 기간 가입을 권해요`});
+    else if(sale.code !== 'later') pts.push({key:true, t:'첫 보험료를 낸 날 이미 특보가 난 지역은 그 재해를 보상하지 않아요 → 특보 전에 가입해야 해요'});
+  }
+  if(f.ins === 'none' || f.ins === 'unknown'){
+    pts.push({t:'입식 후 20일 안에 품종·수량을 신고했는지 확인 (안 하면 재난지원금·양식보험 가입 불가)', need:true});
+  }
+  if(f.ins === 'unknown') pts.unshift({key:true, t:'가입 여부부터 확인 · 다른 조합에서 가입했을 수도 있어요'});
+  if(P.heat === 'rider' && f.ins !== 'full') pts.push({t:'고수온은 기본 보험만으로는 보장되지 않아요 · 특약을 함께 넣어야 해요'});
+  if(P.heat === 'base' && f.ins === 'checkExcl') pts.push({key:true, t:'보험료를 줄이려고 고수온을 빼는 특약(부담보)을 넣었는지 증권으로 확인'});
+  if(sale.code === 'soon') pts.push({key:true, t:`이 상품은 ${sale.end}월까지만 가입할 수 있어요`});
+  if(sale.code === 'later') pts.push({t:`${sale.start}월에 판매가 시작돼요 · 시작 주에 바로 연락하도록 예약`});
+  if(f.ins === 'full' || r.top >= 2) pts.push({t:'경보가 나면 먹이 주기 중단, 선별·분조 금지 (약관상 의무)'});
+  if(r.top >= 2 || r.alert) pts.push({t:'액화산소 등 대응 장비 점검 안내', need:true});
+  if(P.caution) pts.push({key:true, t:P.caution});
+  return pts;
+}
+
+function checkGuide(f){
+  const sale = saleState(f.p);
+  if(f.ins === 'none') return sale.code === 'later'
+    ? `판매 시작(${sale.start}월) 시기를 안내하고, 시작 주에 상담을 예약하세요.`
+    : '특보 발령 전, 판매 기한과 인수 조건을 확인하고 가입 의향을 물어보세요.';
+  if(f.ins === 'norider') return '가입한 보험에 고수온 특약이 없어요. 특약을 더할 수 있는지와 가입 의향을 확인하세요.';
+  if(f.ins === 'checkExcl') return '증권에서 고수온을 뺀 특약(부담보)이 있는지 확인하세요.';
+  if(f.ins === 'unknown') return '보험 가입 여부와 입식신고 여부부터 확인하세요.';
+  return '경보 때 지켜야 할 의무를 안내하고, 피해가 보이면 바로 알리도록 하세요.';
+}
+
+// 예시 문장. 예상 부담은 보험료 칸에 견적을 넣으면 채워짐.
+function exampleScript(f){
+  const r = regionInfo[f.region], sale = saleState(f.p);
+  if(sale.code === 'unknown') return `“${esc(f.name)}님, ${esc(f.region)} 수온 예보와 보험 보장 상태를 확인하려고 연락드렸습니다. 가입 상품과 판매 기간, 약관 조건을 함께 확인해 드릴까요?”`;
+  const open = `“${esc(f.name)}님, ${r.top >= 2
+    ? `${r.d}일 뒤 ${esc(f.region)} 바다가 ${r.t[r.d].toFixed(1)}℃까지 오를 것으로`
+    : '앞으로 수온이 오를 것으로'} 보여 먼저 연락드렸습니다.`;
+  const burden = '<b id="s-burden">[예상 부담]</b>';
+  if(r.alert && ['none','unknown','norider'].includes(f.ins))
+    return `“${esc(f.name)}님, ${esc(f.region)}에 ${r.alert.type}가 나서 연락드렸습니다. 지금 가입하셔도 이번 피해는 보상받기 어려워요. 대신 지금 하실 대응을 먼저 알려드리고, 다음 판매 기간에 미리 연락드려도 될까요?”`;
+  if(f.ins === 'none' && sale.code === 'later')
+    return `${open} ${PRODUCTS[f.p].name}은 ${sale.start}월부터 가입할 수 있어요. 판매가 시작되면 바로 안내드려도 될까요?”`;
+  if(f.ins === 'none')
+    return `${open} 고수온 보험 가입 시 지원을 제외한 예상 부담은 ${burden}입니다. 조건을 함께 확인해 드릴까요?”`;
+  if(f.ins === 'norider')
+    return `${open} 지금 보험에는 고수온이 빠져 있어요. 고수온 특약을 더하면 지원을 제외한 예상 부담은 ${burden}입니다. 조건을 함께 확인해 드릴까요?”`;
+  if(f.ins === 'checkExcl')
+    return `${open} 가입하신 보험에서 고수온을 빼셨는지 증권으로 함께 확인해 드릴까요?”`;
+  if(f.ins === 'unknown')
+    return `${open} 혹시 양식보험에 가입하셨는지, 입식신고는 하셨는지 여쭤봐도 될까요?”`;
+  return `${open} 경보가 나면 먹이 주기를 멈추고 선별·분조는 미뤄 주셔야 해요.”`;
+}
+
+const bytes = s => [...s].reduce((n,c) => n + (c.charCodeAt(0) > 127 ? 2 : 1), 0);
+function money(n){ return Math.round(n).toLocaleString('ko-KR'); }
+
+/* ===== 화면 상태 ===== */
+let page = 'home';
+let filter = {region:null, only:'all'};
+let selected = null;
+let fcRegion = '통영', fcPick = 0;
+let q = '', histFarm = null;
+let homeRegion = '통영', bulkTpl = 'before';
+// 일괄 안내 문자: 어가마다 바꾸지 않는 공통 문구
+const BULK_TPL = {
+  before: {label:'특보 전 가입 안내', text:'[○○수협] 바다 수온이 오르고 있어요. 고수온 특보가 난 뒤에 가입하면 이번 피해는 보상받기 어려워요. 양식보험과 고수온 특약 가입 여부를 지금 확인해 보세요. 상담: [수협 전화]'},
+  close:  {label:'판매 마감 안내', text:'[○○수협] 일부 양식보험은 이번 달 말에 판매가 끝나요. 아직 가입하지 않았거나 고수온 특약이 없다면 마감 전에 상담받아 보세요. 상담: [수협 전화]'},
+  alert:  {label:'특보 발령 시 대응', text:'[○○수협] 고수온 특보가 발령됐어요. 먹이 주기를 멈추고 선별·분조는 미뤄 주세요. 산소 공급 장비를 점검하고, 피해가 보이면 바로 수협에 알려 주세요. 문의: [수협 전화]'},
+};
+for(const v of Object.values(BULK_TPL)) v.text = Shell.text(v.text);   // 저수온 모드면 저수온 문구로
+let bulkText = BULK_TPL.before.text;
+const openSecs = new Set(['check','record']);
+const picked = new Set();
+
+/* ===== 어가 ↔ 계약 (1어종 1계약) =====
+   어가 한 곳에 계약(어종)이 여러 개 붙어요. 순위·위험은 가장 급한 계약 기준, 보험 상태는 계약마다 따로. */
+const items = f => f.items.map((c,i) => ({...f, ...c, ci:i}));
+const byUrgent = (a,b) => score(b).total - score(a).total;
+const lead = f => items(f).sort(byUrgent)[0];
+const fStage = f => Math.max(...items(f).map(farmStage));
+const fScore = f => score(lead(f)).total;
+const fWhy = f => { for(const x of items(f).sort(byUrgent)){ const w = why(x); if(w) return w; } return null; };
+const GAP = ['none','norider','unknown'];
+// 예상 내 부담(만 원): 국비 50% 뺀 뒤, 남은 몫의 70%를 경남도가 지원한다고 가정
+const NAT = 0.5, LOC = 0.7;
+const mine = q => q > 0 ? q * (1 - NAT) * (1 - LOC) : null;
+const saleTxt = x => GAP.includes(x.ins) || x.ins === 'none' ? saleState(x.p).text : '';
+
+const listed = () => farms.filter(f => fWhy(f));
+function sorted(){
+  const order = s => ACTIVE.includes(s) ? 0 : s === 'book' ? 1 : 2;
+  return listed().slice().sort((a,b) => order(a.status) - order(b.status) || fScore(b) - fScore(a));
+}
+
+/* ===== 상담 홈 ===== */
+function renderKpis(){
+  const L = listed();
+  const left = L.filter(f => f.status==='todo' || f.status==='absent').length;
+  document.getElementById('k-all').textContent = L.length;
+  document.getElementById('k-left').textContent = left;
+  document.getElementById('k-book').textContent = L.filter(f => f.status==='book').length;
+  document.getElementById('k-win').textContent = farms.reduce((n,f) => n + f.items.filter(c => c.res === 'win').length, 0);
+  const pre = L.filter(f => !alerted(f) && f.items.some(c => c.ins !== 'full'));
+  document.getElementById('k-pre').innerHTML = `${pre.filter(f => f.status !== 'todo').length}<small style="font-size:15px;color:var(--muted)"> / ${pre.length}</small>`;
+  document.getElementById('nav-left').textContent = left || '';
+  document.getElementById('nav-left').hidden = !left;
+}
+
+// 홈 상단: 선택 지역의 21일 그래프 + 그 지역 수온
+function renderHomeTemp(){
+  const I = regionInfo[homeRegion];
+  document.getElementById('home-fc-sub').textContent = `${homeRegion} · ${md(0)}~${md(20)} · 일최고 수온`;
+  document.getElementById('home-chart').innerHTML = chartSvg(I, -1, {h:240, still:true});
+  const first = I.top >= 1 ? `${mdw(I.d)} (D-${I.d})` : '없음';
+  document.getElementById('home-temp').innerHTML = `
+    <span class="rg">${homeRegion} 오늘 수온</span>
+    <span class="tp">${I.t[0].toFixed(1)}℃</span>
+    <span class="badge s${I.top}">${STAGE_ICON[I.top]} 7일 안 ${STAGE[I.top]}</span>
+    <ul class="mini">
+      <li><span>7일 ${MR.val}</span><b>${I.maxT.toFixed(1)}℃ · ${md(I.dMax)}</b></li>
+      <li><span>${STAGE[I.top]} 첫 예상</span><b>${first}</b></li>
+      <li><span>2~3주 흐름</span><b>${TREND[I.trend]}</b></li>
+    </ul>
+    ${I.alert ? `<span class="alert-tag on">공식 특보: ${I.alert.type.replace(MR.word + ' ','')} (${I.alert.since}~)</span>` : `<span class="alert-tag off">공식 특보: 미발령</span>`}
+    <button type="button" class="linkish" data-goto-fc="${homeRegion}" style="align-self:flex-start">수온 예측 자세히 →</button>`;
+}
+
+function renderFilters(){
+  const opts = [['all','전체'],['active','안내 필요만'],['none','미가입 계약'],['gap','특약 없음·모름'],['book','예약']];
+  const reg = filter.region ? `<button type="button" class="chip" data-clear aria-pressed="true">${esc(filter.region)} ✕</button>`
+                            : `<button type="button" class="chip" data-reg="${homeRegion}" aria-pressed="false">${esc(homeRegion)} 어가만</button>`;
+  document.getElementById('filters').innerHTML = reg + opts.map(([k,t]) =>
+    `<button type="button" class="chip" data-only="${k}" aria-pressed="${filter.only===k}">${t}</button>`).join('');
+}
+
+function pass(f){
+  if(filter.region && f.region !== filter.region) return false;
+  switch(filter.only){
+    case 'active': return ACTIVE.includes(f.status);
+    case 'none': return f.items.some(c => c.ins === 'none');
+    case 'gap': return f.items.some(c => ['norider','checkExcl','unknown'].includes(c.ins));
+    case 'book': return f.status === 'book';
+  }
+  return true;
+}
+
+function ctrLines(f){
+  return items(f).sort(byUrgent).map(x => {
+    const s = saleState(x.p), showSale = GAP.includes(x.ins);
+    return `<div class="ctr-line"><b>${esc(x.species)}</b><span class="${INS[x.ins].cls}">${INS[x.ins].label}</span>${showSale ? `<small class="${s.cls}">${s.text}</small>` : ''}</div>`;
+  }).join('');
+}
+
+function renderRows(){
+  const all = sorted();
+  const rows = all.filter(pass);
+  document.getElementById('empty').hidden = rows.length > 0;
+  document.getElementById('rows').innerHTML = rows.map(f => {
+    const L0 = lead(f), rank = all.indexOf(f) + 1, st = fStage(f), sp = speciesRisk(L0), multi = f.items.length > 1;
+    const done = !ACTIVE.includes(f.status);
+    const stCls = f.status === 'todo' ? 'todo' : f.status === 'book' ? 'book' : f.status === 'win' ? 'win' : '';
+    const spCls = !sp.known ? 'sp-none' : sp.hit ? 'sp-hit' : '';
+    const w = fWhy(f);
+    const whyTag = w === 'soon' ? '<span class="tag-why">마감 임박</span>' : w === 'alert' ? '<span class="tag-why" style="background:var(--alert-soft);color:var(--alert)">특보 발령</span>' : '';
+    const nx = f.next && f.status !== 'win' ? `<span class="next">다음 연락 ${f.next.slice(5).replace('-','/')}</span>` : '';
+    return `<tr class="pick-row ${done?'done':''}" data-id="${f.id}" tabindex="0" aria-selected="${selected===f.id}">
+      <td class="ck"><input type="checkbox" data-ck="${f.id}" ${picked.has(f.id)?'checked':''} aria-label="${esc(f.name)} 선택"></td>
+      <td class="rank">${rank}</td>
+      <td class="who"><b>${esc(f.name)}</b><small>${f.id} · ${esc(f.region)}${multi ? ` · 계약 ${f.items.length}건` : ''}</small>${f.consent?'':'<small class="consent-n">문자 미동의</small>'}</td>
+      <td><span class="badge s${st}">${STAGE_ICON[st]} ${STAGE[st]}</span>${whyTag}<small class="${spCls}" style="display:block;font-size:12px;white-space:nowrap;margin-top:3px" title="${esc(sp.text)}">${multi ? esc(L0.species) + ' ' : ''}${esc(sp.short)}</small></td>
+      <td>${ctrLines(f)}</td>
+      <td class="col-st"><span class="st ${stCls}">${STATUS[f.status]}</span>${nx}</td>
+    </tr>`;
+  }).join('');
+  renderBulk(rows);
+}
+function updateBulkLen(){
+  const b = bytes(bulkText);
+  document.getElementById('bulk-note').textContent = `선택한 어가 모두에게 같은 내용이 가요 · 고쳐 쓸 수 있어요 · [○○수협]·[수협 전화]는 발송 때 실제 값으로 바뀌어요 · ${b}바이트 ${b > 90 ? '장문(LMS)' : '단문(SMS)'}`;
+}
+function renderBulk(rows){
+  rows = rows || sorted().filter(pass);
+  const pf = [...picked].map(id => farms.find(f => f.id === id)).filter(Boolean);
+  const ok = pf.filter(f => f.consent);
+  document.getElementById('bulk-n').innerHTML = pf.length
+    ? `선택 <b>${pf.length}</b>곳 · 문자 가능 <b>${ok.length}</b>곳`
+    : '선택한 어가가 없어요';
+  document.getElementById('bulk-picked').innerHTML = pf.map(f =>
+    `<button type="button" class="${f.consent ? '' : 'no'}" data-unpick="${f.id}" aria-label="${esc(f.name)} 선택 해제">${esc(f.name)}${f.consent ? '' : ' · 미동의'} ✕</button>`).join('');
+  document.getElementById('bulk-tpl').innerHTML = Object.entries(BULK_TPL)
+    .map(([k,v]) => `<button type="button" class="chip" data-btpl="${k}" aria-pressed="${bulkTpl===k}">${v.label}</button>`).join('');
+  const ta = document.getElementById('bulk-preview');
+  if(ta.value !== bulkText) ta.value = bulkText;
+  updateBulkLen();
+  document.getElementById('bulk-sms').disabled = !ok.length || !bulkText.trim();
+  const all = document.getElementById('ck-all');
+  all.checked = rows.length > 0 && rows.every(f => picked.has(f.id));
+}
+
+function acc(key, title, summary, body){
+  return `<details class="acc" id="acc-${key}" data-key="${key}"${openSecs.has(key) ? ' open' : ''}>
+    <summary><span class="t">${title}</span><span class="s">${summary}</span><span class="arw" aria-hidden="true">▾</span></summary>
+    <div class="body">${body}</div>
+  </details>`;
+}
+
+function ctrCard(x, k){
+  const P = PRODUCTS[x.p], sale = saleState(x.p), H = heatLine(x);
+  const saleLine = sale.code === 'open' ? `<span class="ok">지금 가입 가능</span>`
+                 : sale.code === 'soon' ? `<span class="ng">${sale.end}월 말 마감</span>`
+                 : sale.code === 'unknown' ? '<span>판매 기간 확인 필요</span>'
+                 : `<span>${sale.start}월부터 가입 가능</span>`;
+  const heatCls = H.ok === true ? 'ok' : H.ok === false ? 'ng' : '';
+  const gap = GAP.includes(x.ins);
+  return `<div class="ctr-card">
+    <div class="ctr-h"><span class="ctr-no">${k+1}</span><b>${esc(x.species)}</b><span class="note">${esc(x.method)} · ${P.name}</span><span class="${INS[x.ins].cls}" style="margin-left:auto">${x.p === 'unknown' && x.ins === 'full' ? '고수온 보장 · 약관 확인 필요' : INS[x.ins].label}</span></div>
+    <dl class="facts">
+      <dt class="${MR.id}">${MR.icon} ${MR.word}</dt><dd class="${MR.id} ${heatCls}">${H.text}</dd>
+      ${gap ? `<dt>판매기간</dt><dd>${P.saleText} → ${saleLine}</dd>` : ''}
+    </dl>
+    ${gap ? `<div class="ctr-q"><label>견적 <input data-quote="${x.ci}" type="number" min="0" inputmode="numeric" value="${x.quote ?? ''}" placeholder="입력"> 만 원</label><span>내 부담 약 <b data-mine="${x.ci}">–</b></span></div>` : ''}
+    ${P.caution && gap ? `<p class="note" style="margin-top:4px">${esc(P.caution)}</p>` : ''}
+  </div>`;
+}
+
+/* ===== 어가 상세 =====
+   API(household_detail_api.py)가 연결되면 DB 어가(fishery_households)를 기준으로 그리고,
+   연결이 안 되면(파일로 열었을 때 등) 위의 가상 예시 어가로 그려요.
+   왼쪽: 어가 · 수온 · 계약별 보험 / 오른쪽: 상담 시 확인 사항 · 전화 · 결과 기록 · 상담 기록 · 안내처 */
+const API_BASE = window.DETAIL_API_BASE ?? ((location.protocol === 'file:' ? 'http://127.0.0.1:8000'
+  : location.port === '8765' ? `${location.protocol}//${location.hostname}:8000`
+  : location.origin));   // 배포(Render) 등 백엔드가 화면을 같이 내보낼 때는 같은 주소 (다른 화면과 동일)
+let apiOk = false, apiList = [], apiSel = null, apiData = null, apiErr = null, detailMode = 'mock';
+let apiRequestId = 0;
+let apiListLoading = false, apiPending = null;
+const apiQuotes = {};   // mapping_id → 견적(만 원)
+
+function renderBrief(){ return detailMode === 'api' ? renderApiDetail() : renderMockBrief(); }
+
+// mockText=true(가상 데이터 브리핑)면 저수온 모드일 때 문구('고수온' · 수온 방향 · 대응 요령)를 Shell.text 로 바꿔서 그림.
+// 서버 데이터 브리핑은 바꾸지 않음: 백엔드가 ?mode= 에 맞춘 문구를 주고, 특약 이름 같은 실제 계약 내용이 바뀌면 안 되기 때문
+function briefBoxes(leftHtml, rightHtml, mockText = false){
+  document.getElementById('brief').innerHTML = mockText ? Shell.text(leftHtml) : leftHtml;
+  document.getElementById('brief-side').innerHTML = mockText ? Shell.text(rightHtml) : rightHtml;
+}
+
+// 어가 선택에는 담당 지역 어가만
+const regionHouseholds = () => apiList.filter(h => h.region === homeRegion);
+function renderPicker(){
+  const wrap = document.getElementById('hh-pick-wrap'), sel = document.getElementById('hh-pick');
+  wrap.hidden = !apiOk;
+  if(!apiOk) return;
+  const mockF = farms.find(x => x.id === selected);
+  const mockOpt = detailMode === 'mock' && mockF ? `<option value="" selected>가상 예시 · ${esc(mockF.name)} (${mockF.id})</option>` : '';
+  const emptyOpt = detailMode === 'api' && apiSel == null ? '<option value="" selected>어가를 선택해 주세요</option>' : '';
+  sel.innerHTML = mockOpt + emptyOpt + regionHouseholds().map(h => `<option value="${h.household_id}" ${detailMode === 'api' && apiSel === h.household_id ? 'selected' : ''}>${esc(h.owner_name)} · ${esc(h.household_name)} (${esc(h.region || '-')}${h.species.length ? ' · ' + esc(h.species.join(', ')) : ''})</option>`).join('');
+}
+
+/* ----- 가상 예시 어가 ----- */
+function renderMockBrief(){
+  renderPicker();
+  const f = farms.find(x => x.id === selected);
+  if(!f){ briefBoxes(`<div class="empty">어가를 찾을 수 없어요${selected ? ` (${esc(selected)})` : ''}. <a class="linkish" href="consult_home.html">연락 목록에서 고르기 →</a></div>`, ''); return; }
+  const xs = items(f).sort(byUrgent), L0 = xs[0], I = regionInfo[f.region], st = fStage(f), sp = speciesRisk(L0);
+  // 확인 사항: 가장 급한 계약 기준 + 나머지 계약은 한 줄씩
+  const points = talkingPoints(L0).slice();
+  xs.slice(1).forEach(x => {
+    if(x.ins === 'none') points.push({key:true, t:`${x.species}: 미가입 · ${saleState(x.p).code === 'unknown' ? '판매 기간 확인 필요' : saleState(x.p).code === 'later' ? saleState(x.p).start + '월부터 가입 가능' : '지금 가입 가능'}`});
+    if(x.ins === 'norider') points.push({key:true, t:`${x.species}: 기본만 가입 → 고수온 특약 추가 안내`});
+    if(x.ins === 'unknown') points.push({key:true, t:`${x.species}: 보험 가입 여부 확인`});
+    if(x.ins === 'checkExcl') points.push({t:`${x.species}: 고수온을 빼고 가입했는지 증권 확인`});
+  });
+  const checks = points.map((p,i) =>
+    `<li class="${p.key ? 'key' : ''}"><label><input type="checkbox" id="chk-${f.id}-${i}"><span>${esc(p.t)}${p.need ? '<span class="need">근거 확인 필요</span>' : ''}</span></label></li>`).join('');
+  const AL = I.alert
+    ? `<div class="alert-box on"><b>공식 특보: ${I.alert.type} 발령 중 (${I.alert.since}~)</b><br>지금 가입해도 이번 피해는 보상 안 돼요 → 대응 요령 안내 + 다음 판매 기간 가입 권유</div>`
+    : `<div class="alert-box off"><b>공식 특보: 미발령</b> (10/22 06:00 기준)<br>특보 전이라 지금이 가입 상담 적기예요</div>`;
+  const gapXs = xs.filter(x => GAP.includes(x.ins));
+  const resSel = gapXs.map(x => `<label>${esc(x.species)} 계약 결과
+      <select data-res="${x.ci}"><option value="">아직 결정 안 함</option><option value="win" ${x.res==='win'?'selected':''}>가입 완료</option><option value="hold" ${x.res==='hold'?'selected':''}>보류 · 거절</option></select></label>`).join('');
+
+  briefBoxes(`
+    <div class="b-head">
+      <h2>${esc(f.name)} 어가 브리핑 <span class="src-tag">가상 예시</span></h2>
+      <p>${f.id} · ${esc(f.region)} · ${f.phone} · 계약 ${f.items.length}건</p>
+    </div>
+
+    <div class="b-sec">
+      <h3>계약별 보험 (1어종 1계약 · 급한 순)</h3>
+      <div class="ctr-cards">${xs.map(ctrCard).join('')}</div>
+      ${gapXs.length ? `<div class="ctr-total"><span>보험 공백 계약 ${gapXs.length}건 합계 예상 부담</span><b id="c-total-mine">–</b></div>
+      <p class="note">국비 50% · 경남도가 남은 몫의 70% 지원(2025년 기준, 기본 보험 상한 700만 원)을 가정한 예시 · 수협 확인 필요</p>` : ''}
+    </div>
+
+    <details class="b-sec b-temp">
+      <summary><span class="t">수온 · 특보</span><span class="s"><span>오늘 ${I.t[0].toFixed(1)}℃</span><span class="badge s${st}">${STAGE_ICON[st]} ${STAGE[st]}</span>
+          <span class="note">· 7일 ${MR.val} ${I.maxT.toFixed(1)}℃ · </span>${I.alert ? `<span class="al-on">공식 특보 ${I.alert.type} 발령 중</span>` : '<span class="note">공식 특보 미발령</span>'}</span><span class="arw">▾</span></summary>
+      <div class="b-temp-body">
+      <div class="risk-line">오늘 ${I.t[0].toFixed(1)}℃
+        ${I.top >= 2 ? `· ${I.d}일 뒤 ${I.t[I.d].toFixed(1)}℃ 예상` : `· 7일 ${MR.val} ${I.maxT.toFixed(1)}℃`}
+        <span class="badge s${st}">${STAGE_ICON[st]} ${STAGE[st]}</span></div>
+      <p class="note">${esc(sp.text)} · 2~3주 흐름 ${TREND[I.trend]} (참고)</p>
+      <p class="note">앱 자체 판정, 공식 특보는 수과원 발표를 따라요 · <button type="button" class="linkish" data-goto-fc="${f.region}">${esc(f.region)} 수온 예측 보기 →</button></p>
+      ${AL}
+      </div>
+    </details>`, `
+    ${govAcc()}
+
+    ${acc('check', '상담 시 확인 사항', `확인할 것 ${points.length}개`, `
+      <p class="guide">${esc(checkGuide(L0))}</p>
+      <ul class="checks">${checks}</ul>
+      ${scriptBox('m:' + f.id, exampleScript(L0))}`)}
+
+    <div class="actions">
+      <button type="button" class="btn pri" data-act="call"><svg class="ic-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>전화 연결</button>
+    </div>
+
+    ${acc('record', '결과 기록', '', `
+      <div class="record">
+        <label>통화 결과
+          <select id="r-status">
+            ${Object.entries(STATUS).filter(([k]) => k!=='todo' && k!=='sms').map(([k,v]) => `<option value="${k}" ${f.status===k?'selected':''}>${v}</option>`).join('')}
+          </select></label>
+        <label>상담일 <input id="r-next" type="date" min="2026-10-22"></label>
+        ${resSel}
+        <label class="full">메모 <input id="r-memo" type="text" placeholder="예) 조피볼락 가입 의향, 참돔은 다음 달 결정"></label>
+        <button type="button" class="btn pri full" data-act="save">결과 저장 · 다음 어가로</button>
+      </div>
+      <p class="note" style="margin-top:6px">계약 결과는 어종마다 따로 남고, 가입 전환은 계약 수로 세요.</p>`)}
+
+    ${helpAcc()}`, true);
+  loadGov({key:'m' + f.id, region:f.region, species:f.items.map(x => x.species)});
+  updateCalc(f);
+}
+
+/* ----- 정부 지원금 · 고수온 피해 지원: 백엔드 /api/v1/gov-support/damage -----
+   Super DB는 보지 않고 팀 CSV 4개 표만 씀 (지원 제도 · 품목별 복구 단가 · 피해율별 상환연기 · 출처)
+   복구 단가 = 해양수산부 「자연재난 복구비용 산정기준(단가)」 고시 품목 → 여기 없는 어종은 '정부 지원 품목 아님'
+   링크는 정부 사이트(*.go.kr · gov.kr)만 */
+const govCache = {};      // 어가 key → {state:'ok'|'err', species, dmg, err}
+let govShown = null;      // 지금 화면에 그려진 어가 key
+function govAcc(){
+  return acc('gov', '정부 지원금', '<span id="gov-sum">확인 중…</span>',
+    '<div class="gov" id="gov-box"><p class="note">정부 고시 기준 피해 지원을 확인하는 중…</p></div>');
+}
+// 지원 품목 / 아닌 품목 나누기
+const govSplit = g => {
+  const ok = g.species.filter(sp => (g.dmg.prices[sp] || []).length);
+  return {ok, no:g.species.filter(sp => !ok.includes(sp))};
+};
+async function loadGov(ctx){
+  govShown = ctx.key;
+  if(!govCache[ctx.key]){
+    const sp = [...new Set(ctx.species.filter(Boolean))].slice(0, 6);
+    try{
+      const dq = new URLSearchParams(); sp.forEach(x => dq.append('species', x));
+      govCache[ctx.key] = {state:'ok', species:sp, dmg:await apiGet(`/api/v1/gov-support/damage?${dq}`)};
+    }catch(e){
+      govCache[ctx.key] = {state:'err', err:e.message};
+    }
+  }
+  if(govShown !== ctx.key) return;   // 그 사이 다른 어가로 바뀜
+  const g = govCache[ctx.key], sum = document.getElementById('gov-sum'), box = document.getElementById('gov-box');
+  if(!sum || !box) return;
+  if(g.state === 'err'){
+    sum.textContent = '불러오지 못함';
+    box.innerHTML = `<p class="note">피해 지원 정보를 불러오지 못했어요 · ${esc(g.err || '')}<br>백엔드(8000)를 켜면 정부 고시 기준으로 보여 줘요.</p>`;
+    return;
+  }
+  const {ok, no} = govSplit(g);
+  sum.textContent = !g.species.length ? '어종 정보 없음'
+    : !ok.length ? '정부 지원 품목 아님'
+    : [`${ok.join('·')} 재해복구비 지원 품목`, no.length && `${no.join('·')} 정부 지원 품목 아님`].filter(Boolean).join(' · ');
+  box.innerHTML = govBody(g);
+  govCalc();
+}
+const wonTxt = n => `${money(n)}원`;
+// 폐사 마릿수 × 복구 단가 → 재해복구비 · 보조/융자/자부담 · 피해율 → 정책자금 상환연기
+function govCalc(){
+  const g = govCache[govShown]; if(!g || g.state !== 'ok') return;
+  const out = document.getElementById('gov-res'); if(!out) return;
+  let total = 0, any = false;
+  g.species.forEach((sp, i) => {
+    const list = g.dmg.prices[sp] || []; if(!list.length) return;
+    const sel = document.querySelector(`#gov-box [data-gsize="${i}"]`), dead = document.querySelector(`#gov-box [data-gdead="${i}"]`);
+    const P = list[sel ? +sel.value : 0], n = parseFloat(dead && dead.value), line = document.getElementById('gov-line-' + i);
+    if(n > 0){
+      const v = n * P.price; total += v; any = true;
+      line.innerHTML = `${money(n)}${esc(P.unit || '')} × ${money(P.price)}원 = <b>${wonTxt(v)}</b>`;
+    } else line.textContent = `단가 ${money(P.price)}원/${P.unit || ''}${P.since ? ` (${P.since}부터)` : ''}`;
+  });
+  const S = g.dmg.split || {}, rate = parseFloat((document.getElementById('gov-rate') || {}).value);
+  const rows = [];
+  if(any){
+    let grant = total * S.grant / 100, capped = false;
+    if(S.cap && grant > S.cap){ grant = S.cap; capped = true; }
+    const loan = total * S.loan / 100, self = Math.max(0, total - grant - loan);
+    rows.push(`<dt>재해복구비</dt><dd><b>${wonTxt(total)}</b></dd>`,
+      `<dt>보조 ${S.grant}% (국비·지방비)</dt><dd><b class="ok">${wonTxt(grant)}</b>${capped ? ` <span class="need">어가당 ${money(S.cap / 1e4)}만 원 한도</span>` : ''}</dd>`,
+      `<dt>융자 ${S.loan}%</dt><dd>${wonTxt(loan)} <span class="note">(갚는 돈)</span></dd>`,
+      `<dt>자부담</dt><dd>${wonTxt(self)}</dd>`);
+  } else rows.push('<dt>재해복구비</dt><dd class="note">폐사 마릿수를 넣으면 계산해요</dd>');
+  if(rate >= 0 && !isNaN(rate)){
+    const R = (g.dmg.relief || []).find(x => rate >= x.min_rate && rate < x.max_rate);
+    rows.push(`<dt>정책자금 상환</dt><dd>${!R ? '<span class="note">기준 없음</span>' : R.years > 0
+      ? `<b>${R.years}년 상환연기</b> · 이자 감면 ${esc(R.interest || '')}${R.apply_to ? ` · ${esc(R.apply_to)}` : ''}`
+      : `<span class="note">${esc(R.note || '해당 없음')} (피해율 ${R.max_rate}% 미만)</span>`}</dd>`);
+  } else rows.push('<dt>정책자금 상환</dt><dd class="note">피해율을 넣으면 상환연기 기준을 보여 줘요</dd>');
+  out.innerHTML = rows.join('');
+}
+// 정부 사이트(*.go.kr · 정부24 gov.kr · 정책브리핑 korea.kr) 링크만. 기사·민간 사이트 링크는 보여 주지 않음
+const govUrl = u => {
+  try{ const x = new URL(u); return /^https?:$/.test(x.protocol) && /(^|\.)((go|gov)\.kr|korea\.kr)$/i.test(x.hostname) ? x.href : ''; }
+  catch(_){ return ''; }
+};
+const govLink = (u, label) => govUrl(u) ? `<a class="linkish" href="${esc(govUrl(u))}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>` : '';
+function govProgram(x){
+  const link = govLink(x.link, '정부 자료 보기 →');
+  return `<div class="gov-card">
+    <div class="gov-h"><b>${esc(x.name)}</b>${x.kind ? `<span class="src-tag">${esc(x.kind)}</span>` : ''}${x.when ? `<span class="gov-tag">${esc(x.when)}</span>` : ''}</div>
+    <dl class="facts">
+      ${x.content ? `<dt>지원</dt><dd>${esc(x.content)}</dd>` : ''}
+      ${x.required ? `<dt>조건</dt><dd>${esc(x.required)}</dd>` : ''}
+      ${x.apply_to ? `<dt>신청</dt><dd>${esc(x.apply_to)}</dd>` : ''}
+      ${x.status_2026 ? `<dt>2026년</dt><dd>${esc(x.status_2026)}</dd>` : ''}
+      ${x.basis ? `<dt>근거</dt><dd>${esc(x.basis)}</dd>` : ''}
+      ${x.to_check.length ? `<dt>확인 필요</dt><dd>${x.to_check.map(t => `<span class="need" style="margin:0 4px 2px 0">${esc(t)}</span>`).join('')}</dd>` : ''}
+    </dl>
+    ${link ? `<span style="display:inline-block;margin-top:6px">${link}</span>` : ''}${x.checked ? ` <span class="note">· ${esc(x.checked)} 확인</span>` : ''}
+  </div>`;
+}
+function govBody(g){
+  const D = g.dmg, S = D.split || {}, N = D.notice || {}, {ok, no} = govSplit(g);
+  const notice = govLink(N.link, N.name || '해양수산부 복구 단가 고시') || esc(N.name || '');
+  const srcs = (D.sources || []).filter(x => govUrl(x.link));
+  const srcBox = srcs.length ? `<details class="est"><summary>정부 자료 출처 ${srcs.length}개</summary><ul class="links" style="margin:6px 0 0 16px">${srcs.map(x => `<li>${govLink(x.link, x.name)} <span class="note">${esc(x.use || '')}</span></li>`).join('')}</ul></details>` : '';
+  const items = (D.items || []).length ? `<p class="note" style="margin-top:6px">지원 품목: ${esc(D.items.join(', '))}${notice ? ` · 기준 ${notice}` : ''}</p>` : '';
+  if(!g.species.length) return `<p class="note">등록된 양식 어종이 없어 확인할 수 없어요.</p>${items}`;
+  if(!ok.length) return `<p class="note" style="margin-top:4px"><span class="need" style="margin:0 4px 0 0">정부 지원 품목 아님</span>
+      ${esc(no.join(', '))}은(는) 정부 복구 단가 고시의 지원 품목 목록에 없어 재해복구비(재난지원금)를 계산할 수 없어요.</p>
+    ${items}${srcBox}`;
+  const spRows = g.species.map((sp, i) => {
+    const list = D.prices[sp] || [];
+    if(!list.length) return `<div class="gov-calc"><div class="gov-calc-h"><b>${esc(sp)}</b><span class="need">정부 지원 품목 아님</span></div></div>`;
+    const size = list.length > 1
+      ? `<select data-gsize="${i}">${list.map((p, k) => `<option value="${k}">${esc(p.size || '-')} · ${money(p.price)}원</option>`).join('')}</select>`
+      : (list[0].size && list[0].size !== '-' ? `<span class="note">${esc(list[0].size)}</span>` : '');
+    return `<div class="gov-calc">
+      <div class="gov-calc-h"><b>${esc(sp)}</b><span class="note">${esc(list[0].item)}</span></div>
+      <label>${size} 폐사 <input data-gdead="${i}" type="number" min="0" inputmode="numeric" placeholder="입력"> ${esc(list[0].unit || '')}</label>
+      <p class="note" id="gov-line-${i}"></p>
+    </div>`;
+  }).join('');
+  const progs = D.programs || [], top = progs.filter(x => x.kind === '지원금'), rest = progs.filter(x => x.kind !== '지원금');
+  const splitSrc = govLink(S.link, S.source || '근거 규정') || esc(S.source || '');
+  return `<div class="gov-sub" style="margin-top:4px"><h4>고수온·저수온 피해가 나면 · 재해복구비(재난지원금) 계산</h4>
+      ${spRows}
+      <div class="gov-calc"><label>피해율 (시·군 조사) <input id="gov-rate" type="number" min="0" max="100" inputmode="numeric" placeholder="입력"> %</label></div>
+      <dl class="facts gov-out" id="gov-res"></dl>
+      <p class="note" style="margin-top:6px">복구비 = 폐사 마릿수 × 정부 복구 단가(${notice}) · 보조·융자·자부담 비율과 한도는 ${splitSrc} 기준${S.confirmed ? '' : '이라 <b>확인 필요</b>'} · 보험금과 함께 받을 수 있는지는 시·군청과 수협에 확인해 주세요.</p>
+    </div>
+    ${top.length ? `<h4 style="margin-top:14px">고수온·저수온 피해 지원 제도</h4>
+    <div class="gov-list">${top.map(govProgram).join('')}</div>` : ''}
+    ${rest.length ? `<details class="est"><summary>대출·보증 등 ${rest.length}개 더 보기</summary><div class="gov-list" style="margin-top:8px">${rest.map(govProgram).join('')}</div></details>` : ''}
+    ${items}${srcBox}`;
+}
+
+function helpAcc(){
+  return acc('help', '지원·정책자금 안내처', '보험료 지원 · 재난지원금 · 정책자금', `
+      <div class="links">
+        <span>보험료 지원: 나라 + 경남도·시군 (정부24 지원제도 확인)</span>
+        <span>피해 시 재난지원금: 시·군청 · 피해 사실 확인서 필요</span>
+        <span>피해 복구·경영 안정 자금: 수협은행 (올해 조건 확인 필요)</span>
+        <span class="note">보험금과 지원금을 함께 받을 수 있는지는 판단하지 않아요 → 시·군청과 수협에 확인</span>
+      </div>`);
+}
+
+// 계약별 견적 → 내 부담, 합계는 상담 멘트의 [예상 부담]에도 넣어요
+function updateCalc(f){
+  let total = 0, any = false;
+  document.querySelectorAll('#brief [data-quote]').forEach(inp => {
+    const ci = +inp.dataset.quote, q = parseFloat(inp.value), m = mine(q);
+    f.items[ci].quote = q > 0 ? q : null;
+    const out = document.querySelector(`#brief [data-mine="${ci}"]`);
+    out.textContent = m == null ? '–' : money(m) + '만 원';
+    if(m != null){ total += m; any = true; }
+  });
+  showBurden(any ? total : null);
+}
+/* ===== 예시 멘트 편집 =====
+   어가마다 상담자가 고친 멘트를 이 화면에 기억해요(새로고침하면 처음 멘트로).
+   [예상 부담] 자리(#s-burden)를 지우지 않으면 견적을 넣을 때 금액이 자동으로 바뀌어요. */
+const scriptOrig = {}, scriptEdits = {};
+function scriptBox(key, html){
+  scriptOrig[key] = html;
+  const edited = Object.hasOwn(scriptEdits, key);
+  return `<div class="script-h"><b>예시 멘트</b><span>눌러서 고쳐 쓸 수 있어요</span><span class="edited" data-script-flag ${edited ? '' : 'hidden'}>수정함</span></div>
+    <div class="script" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" aria-label="예시 멘트 (고쳐 쓸 수 있어요)" data-script-key="${esc(key)}">${edited ? scriptEdits[key] : html}</div>
+    <div class="script-tools">
+      <button type="button" class="linkish" data-script-reset ${edited ? '' : 'disabled'}>↺ 원래 멘트로</button>
+      <button type="button" class="linkish" data-script-copy>복사</button>
+    </div>`;
+}
+function scriptFlag(key){
+  const on = Object.hasOwn(scriptEdits, key);
+  const flag = document.querySelector('#brief-side [data-script-flag]'), btn = document.querySelector('#brief-side [data-script-reset]');
+  if(flag) flag.hidden = !on;
+  if(btn) btn.disabled = !on;
+}
+function showBurden(total){
+  const t = document.getElementById('c-total-mine');
+  if(t) t.textContent = total != null ? money(total) + '만 원' : '–';
+  const said = document.getElementById('s-burden');
+  if(said) said.textContent = total != null ? `${money(total * 10000)}원` : '[예상 부담]';
+}
+
+/* ----- API 어가 (DB) ----- */
+const API_INS_CLS = {full:'ins ins-ok', excl:'ins ins-gap', norider:'ins ins-gap', noheat:'ins ins-gap',
+                     pending:'ins ins-pend', expired:'ins ins-none', none:'ins ins-none', unknown:'ins ins-unk'};
+const API_GAP = ['none','expired','norider','excl','unknown'];
+const API_STATUS = ['부재·재연락','상담 예약','가입 완료','안내 완료','보류·거절'];
+const ITEM_RESULT = ['가입','보류','안내','타 기관 가입'];
+const won = n => n == null ? '–' : Number(n).toLocaleString('ko-KR') + '원';
+const eok = n => { if(n == null) return '–'; const v = Number(n); return v >= 1e8 ? `${parseFloat((v/1e8).toFixed(2))}억 원` : v >= 1e4 ? `${money(v/1e4)}만 원` : won(v); };
+const pct = r => r == null ? '–' : `${Math.round(Number(r) * 1000) / 10}%`;
+const mdStr = s => { if(!s) return ''; const d = new Date(String(s).slice(0,10) + 'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}(${WEEK[d.getDay()]})`; };
+
+async function apiGet(path){
+  const r = await fetch(API_BASE + path);
+  if(!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || `HTTP ${r.status}`);
+  return r.json();
+}
+async function apiPost(path, body){
+  // 쓰기 요청은 백엔드 규칙상 X-CSRF-Protection: 1 헤더가 필요해요 (postJSON 과 동일)
+  const r = await fetch(API_BASE + path, {method:'POST', headers:{'Content-Type':'application/json', 'X-CSRF-Protection':'1'}, body:JSON.stringify(body)});
+  const j = await r.json().catch(() => ({}));
+  if(!r.ok) throw Object.assign(new Error(typeof j.detail === 'string' ? j.detail : `HTTP ${r.status}`), {body:j});
+  return j;
+}
+async function initApi(){
+  apiErr = null;
+  detailMode = 'api';
+  apiListLoading = true;
+  const params = new URLSearchParams(location.search);
+  const wantId = params.has('id') ? Number(params.get('id')) : null;
+  if(params.has('id')){
+    apiSel = Number.isSafeInteger(wantId) && wantId > 0 ? wantId : null;
+    if(apiSel == null) apiErr = '요청한 어가를 찾을 수 없어요.';
+  }
+  try{
+    apiList = await apiGet('/api/households?limit=1000');
+    apiOk = true;
+    // 상담 홈 연락 목록에서 고른 어가 (farm_detail.html?id=어가번호)
+    if(params.has('id') && (apiSel === wantId || apiSel == null)){
+      const want = apiList.find(h => h.household_id === wantId);
+      apiSel = want ? wantId : null;
+      if(apiSel == null){
+        ++apiRequestId; apiData = null;
+        apiErr = '요청한 어가를 찾을 수 없어요.';
+      }
+    }else if(!params.has('id') && !regionHouseholds().some(h => h.household_id === apiSel)) apiSel = regionHouseholds()[0]?.household_id ?? null;
+    const current = apiList.find(h => h.household_id === apiSel);
+    if(current && current.region !== homeRegion){
+      if(hasOffice(current.region)) setOffice(current.region);
+      else{ homeRegion = fcRegion = current.region; putOffice(current.region); }
+    }
+  }catch(e){
+    apiOk = false;
+    if(!params.has('id')){ apiSel = null; apiData = null; apiErr = e.message; }
+    addNotice(`⚠️ DB 어가 목록을 불러오지 못했어요. (${e.message})`);
+  }finally{
+    apiListLoading = false;
+  }
+  if(page === 'detail') renderBrief(); else renderPicker();
+}
+async function loadApiDetail(id, force){
+  if(!force && apiData && apiData.household.household_id === id) return true;
+  if(!force && apiPending && apiPending.id === id) return apiPending.promise;
+  const requestId = ++apiRequestId;
+  apiData = null; apiErr = null;
+  briefBoxes('<div class="loading">어가 정보를 불러오는 중…</div>', '');
+  const pending = {id, promise:null};
+  apiPending = pending;
+  pending.promise = (async () => {
+    try{
+      const data = await apiGet(`/api/households/${id}/detail?mode=${Shell.mode}`);
+      if(requestId !== apiRequestId || apiSel !== id || detailMode !== 'api') return false;
+      apiData = data;
+    }catch(e){
+      if(requestId !== apiRequestId || apiSel !== id || detailMode !== 'api') return false;
+      apiErr = e.message;
+    }
+    return true;
+  })().finally(() => { if(apiPending === pending) apiPending = null; });
+  return pending.promise;
+}
+async function renderApiDetail(force){
+  renderPicker();
+  if(apiSel == null && apiListLoading && !apiErr){
+    briefBoxes('<div class="loading">어가 목록을 불러오는 중…</div>', ''); return;
+  }
+  if(apiSel == null){
+    const message = apiErr || (apiOk && apiList.length && !regionHouseholds().length ? `${homeRegion} 지역 고객이 없어요. 위 '담당'에서 다른 지역을 골라 보세요.` : apiOk && !apiList.length ? '등록된 어가가 없어요.' : '어가를 고르면 통화 전 브리핑이 보여요.');
+    briefBoxes(`<div class="empty">${esc(message)}</div>`, ''); return;
+  }
+  if(!await loadApiDetail(apiSel, force)) return;
+  if(detailMode !== 'api') return;
+  if(apiErr || !apiData){ briefBoxes(`<div class="empty">어가 정보를 불러오지 못했어요 · ${esc(apiErr || '')}</div>`, ''); return; }
+  const D = apiData, H = D.household, S = D.sea, cards = D.cards;
+  const st = D.stage.level ?? 0, T = S.today, sg = S.stage;
+  const nextContact = new Date(D.consult.next_contact_at || Date.now());
+  // datetime-local은 시간대가 없으므로 UTC 문자열로 바꾸기 전에 한국시간을 반영해요.
+  const nextContactValue = new Date(nextContact.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0,16);
+
+  // 오늘 수온 + 단계
+  const tSrc = T.source === 'risa' ? `<span class="src-tag live">실측</span> RISA ${esc(T.station_name || '')}${T.station_km != null ? ` (${T.station_km}km)` : ''} · ${esc(T.observed_at)}`
+             : T.source === 'forecast' ? `<span class="src-tag">예측</span> 실시간 관측소 값이 없어 오늘 ROMS 예측(${esc(S.metric)})으로 표시`
+             : '<span class="src-tag">정보 없음</span>';
+  // 전체 예측(1~7일 ROMS + 8~21일 ECMWF) 중 가장 위험한 값 (고수온 = 최고 · 저수온 = 최저)
+  const allFc = S.roms.concat(S.om).filter(d => d.value != null);
+  const peak = allFc.length ? allFc.reduce((a, b) => (MR.hot ? b.value > a.value : b.value < a.value) ? b : a) : null;
+  const TREND_BIG = {up:'↗ 상승', flat:'→ 유지', down:'↘ 하강'};
+  const AL = S.alert
+    ? `<div class="alert-box on"><b>공식 특보: ${esc(S.alert.type || '')} 발령 중${S.alert.since ? ` (${esc(S.alert.since)}~)` : ''}</b><br>지금 가입해도 이번 피해는 보상 안 돼요 → 대응 요령 안내 + 다음 판매 기간 가입 권유</div>`
+    : `<div class="alert-box off"><b>공식 특보: 미발령</b> (${esc(D.as_of)} 기준 · 수과원 발표로 확인)<br>특보 전이라 지금이 가입 상담 적기예요</div>`;
+
+  const gaps = cards.filter(c => API_GAP.includes(c.ins));
+  const quoteCards = cards.filter(c => ['none','expired','norider'].includes(c.ins));
+  briefBoxes(`
+    <div class="b-head">
+      <h2>${esc(H.owner_name)} · ${esc(H.household_name)} 어가 브리핑</h2>
+      <p>어가 #${H.household_id} · ${esc(H.sigungu || '')} ${esc(H.area || '')} · ${esc(H.phone_masked || '연락처 없음')} · 어종 ${cards.length}개${H.fishery_type ? ' · ' + esc(H.fishery_type) : ''}</p>
+    </div>
+
+    <div class="b-sec">
+      <h3>계약별 보험 (어종별 · 급한 순) <span class="src-tag ${D.insurance_source === 'claim_api' ? 'live' : ''}">${D.insurance_source === 'claim_api' ? '보험금 계산 API' : 'DB 기본 정보'}</span></h3>
+      <div class="ctr-cards">${cards.length ? cards.map(apiCard).join('') : '<p class="note">등록된 양식 어종이 없어요.</p>'}</div>
+      ${quoteCards.length ? `<div class="ctr-total"><span>보험 공백 ${quoteCards.length}건 합계 예상 부담</span><b id="c-total-mine">–</b></div>
+      <p class="note">국비 50% · 경남도가 남은 몫의 70% 지원(2025년 기준)을 가정한 예시 · 수협 확인 필요</p>` : ''}
+    </div>
+
+    <details class="b-sec b-temp">
+      <summary><span class="t">수온 · 특보</span><span class="s"><span>오늘 ${T.temp != null ? Number(T.temp).toFixed(1) + '℃' : '–'}</span><span class="badge s${st}">${STAGE[st]}</span>
+          <span class="note">· 예측 ${MR.val} ${peak ? Number(peak.value).toFixed(1) + '℃' : '–'} · </span>${S.alert ? `<span class="al-on">공식 특보 ${esc(S.alert.type || '')} 발령 중</span>` : '<span class="note">공식 특보 미발령</span>'}</span><span class="arw">▾</span></summary>
+      <div class="b-temp-body">
+      <div class="tnow">
+        <div class="tnow-main"><div class="tnow-head"><span class="lbl">오늘 수온</span><span class="badge s${st}">${STAGE[st]}</span></div>
+          <span class="big">${T.temp != null ? Number(T.temp).toFixed(1) + '℃' : '–'}</span></div>
+        <div class="tnow-stat"><span class="lbl">예측 ${MR.val}</span><b>${peak ? Number(peak.value).toFixed(1) + '℃' : '–'}</b><small>${peak ? mdStr(peak.day) + (peak.src === 'ECMWF' ? ' · 참고' : '') : esc(S.data_range && S.data_range.roms ? S.data_range.roms.reason : '예측 없음')}</small></div>
+        <div class="tnow-stat"><span class="lbl">2~3주 흐름</span><b>${S.trend ? TREND_BIG[S.trend] : '–'}</b><small>${S.trend ? 'ECMWF 보정 참고' : esc(S.data_range && S.data_range.om ? S.data_range.om.reason : '예측 없음')}</small></div>
+      </div>
+      <p class="note">${tSrc}${S.region_far ? ' · <span class="need">예측 지역이 멀어 대표성 낮음</span>' : ''}</p>
+      ${AL}
+      </div>
+    </details>`, `
+    ${govAcc()}
+
+    ${acc('check', '상담 시 확인 사항', `확인할 것 ${D.checks.length}개`, `
+      <p class="guide">${esc(D.guide)}</p>
+      <ul class="checks">${D.checks.map((p,i) => `<li class="${p.key ? 'key' : ''}"><label><input type="checkbox" id="chk-h${H.household_id}-${i}"><span>${esc(p.t)}${p.need ? '<span class="need">근거 확인 필요</span>' : ''}</span></label></li>`).join('')}</ul>
+      ${scriptBox('h:' + H.household_id, esc(D.script).replace('{burden}', '<b id="s-burden">[예상 부담]</b>'))}`)}
+
+    <div class="actions">
+      <button type="button" class="btn pri" data-act="call"><svg class="ic-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>전화 연결${H.phone_masked ? ' · ' + esc(H.phone_masked) : ''}</button>
+    </div>
+
+    ${acc('record', '결과 기록', '', `
+      <div class="record">
+        <label>통화 결과
+          <select id="r-status">${API_STATUS.map(v => `<option ${D.consult.status === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+        <label>상담일 <input id="r-next" type="datetime-local" value="${nextContactValue}"></label>
+        ${cards.map(c => `<label>${esc(c.standard_name)} 결과
+          <select data-ares="${c.mapping_id}" data-ins="${c.contract ? c.contract.insurance_id : ''}"><option value="">기록 안 함</option>${ITEM_RESULT.map(v => `<option>${v}</option>`).join('')}</select></label>`).join('')}
+        <label>상담자 <input id="r-staff" type="text" maxlength="50" placeholder="이름"></label>
+        <label class="full">메모 <input id="r-memo" type="text" placeholder="예) 조피볼락 가입 의향, 참돔은 다음 달 결정"></label>
+        <button type="button" class="btn pri full" data-act="api-save">결과 저장</button>
+      </div>
+      <p class="note" style="margin-top:6px">시즌(${esc(D.consult.season)}) 상담 상태와 상담 기록에 함께 저장돼요 · 어종별 결과는 따로 남아요.</p>`)}
+
+    ${acc('hist', '상담 기록', `${D.consult.logs.length}건${D.consult.next_contact_at ? ' · 다음 연락 ' + mdStr(D.consult.next_contact_at) : ''}`, D.consult.logs.length
+      ? `<ul class="hist-list">${D.consult.logs.map(l => `<li><b>${esc(String(l.contacted_at).slice(0,16).replace('T',' '))}</b> · ${esc(l.channel)} · <b>${esc(l.result_status)}</b>${l.items.length ? ' · ' + l.items.map(i => esc(i.species) + ' ' + esc(i.result)).join(', ') : ''}${l.memo ? `<br>${esc(l.memo)}` : ''}${l.staff_name ? ` <span class="note">(${esc(l.staff_name)})</span>` : ''}</li>`).join('')}</ul>`
+      : '<p class="note">아직 상담 기록이 없어요.</p>')}
+
+    ${helpAcc()}`);
+  loadGov({key:'h' + H.household_id, region:H.sigungu || (apiList.find(h => h.household_id === H.household_id) || {}).region || homeRegion,
+           species:cards.map(c => c.standard_name || c.species)});
+  quoteCards.forEach(c => { const v = apiQuotes[c.mapping_id]; const i = document.querySelector(`[data-aquote="${c.mapping_id}"]`); if(i && v) i.value = v; });
+  updateApiCalc();
+}
+
+// 주계약에 포함이면 그 사실만, 보장이 안 될 때만 '고수온 보장 X'(저수온 모드는 '저수온 보장 X')로 표시
+// 백엔드가 ?mode= 에 맞춰 card.heat 를 그 모드의 판정으로 채워 줘요
+function apiHeatLine(Hh){
+  const W = MR.word, okc = MR.hot ? 'ok' : 'cold-ok', ngc = MR.hot ? 'ng' : 'cold-ng';
+  if(Hh.ok === true) return Hh.via === '주계약' ? `<b class="${okc}">주계약에 포함</b>` : `<b class="${okc}">${esc(Hh.text)}</b>`;
+  if(Hh.ok === false || Hh.via === '특약'){
+    const none = new RegExp(`${W} 보장(\\(주계약·특약\\))?이 없어요$`).test(Hh.text || '');
+    const why = none ? '' : ` → ${esc(String(Hh.text || '').replace(new RegExp(`^${W}은\\s*`), ''))}`;
+    return `<b class="${ngc}">${W} 보장 X</b>${why}`;
+  }
+  return esc(Hh.text || '확인 필요');
+}
+// 저수온 보장 줄 (백엔드 card.cold · 고수온과 같은 보장 표·같은 판정 규칙)
+function apiColdLine(C){
+  if(C.ok === true) return C.via === '주계약' ? '<b class="cold-ok">주계약에 포함</b>' : `<b class="cold-ok">${esc(C.text)}</b>`;
+  if(C.ok === false || C.via === '특약'){
+    const why = /저수온 보장(\(주계약·특약\))?이 없어요$/.test(C.text || '') ? '' : ` → ${esc(String(C.text || '').replace(/^저수온은\s*/, ''))}`;
+    return `<b class="cold-ng">저수온 보장 X</b>${why}`;
+  }
+  return esc(C.text || '확인 필요');
+}
+// 판매기간 원문에서 이 어종 기간만 짧게 (예: 1월~5월, 10월~12월 → 1~5월, 10~12월)
+function saleShort(text, species){
+  if(!text) return '확인 필요';
+  const part = String(text).split('/').find(p => p.includes(species));
+  const raw = part ? part.split(':').pop() : String(text).split('.')[0];
+  return raw.replace(/(\d+)월\s*~\s*(\d+)월/g, '$1~$2월').trim();
+}
+// 피해 정도별 막대: 초록 = 받는 보험금, 회색 = 손해 - 보험금(자기부담 = 어가 부담, 같은 값이라 한 번만 표시), 막대 전체 길이 = 손해액
+function scBars(rows, payLabel){
+  const top = Math.max(...rows.map(r => Number(r.loss) || 0));
+  if(!top || rows.every(r => !Number(r.payout))) return '';
+  return `<div class="scb-lg"><span><i style="background:#2f8f5b"></i>${payLabel}</span><span><i style="background:#c9ced8"></i>자기부담 (어가가 부담)</span></div>
+    ${rows.map(r => { const L = Number(r.loss) || 0, P = Math.min(Number(r.payout) || 0, L);
+      return `<div class="scb-row"><span>${Math.round(r.rate * 100)}%</span><div class="scb-line">
+        <div class="scb-bar" style="width:calc((100% - 150px) * ${(L / top).toFixed(4)})"><span class="p" style="width:${L ? (P / L * 100).toFixed(1) : 0}%"></span><span class="d" style="flex:1"></span></div>
+        <span class="scb-val"><b>${r.payout == null ? '–' : eok(r.payout)}</b> / 손해 ${eok(r.loss).replace(/ 원$/, '')}</span></div></div>`; }).join('')}`;
+}
+// '가입하면' → '가입했다면' (그래프 범례용)
+const pastAction = a => ({'가입하면':'가입했다면', '고수온 특약을 넣으면':'고수온 특약을 넣었다면', '저수온 특약을 넣으면':'저수온 특약을 넣었다면', '부담보 특약을 빼면':'부담보 특약을 뺐다면'})[a || '가입하면'] || a;
+const moreText = t => t ? `<details class="more"><summary>자세히 ▸</summary><p>${esc(t)}</p></details>` : '';
+
+function apiCard(c, k){
+  const ct = c.contract, P = c.product || {}, Hh = c.heat || {}, R = c.recommend || {};
+  const gap = API_GAP.includes(c.ins);
+  const sale = P.sale || {};
+  const saleCls = sale.code === 'open' ? 'ok' : sale.code === 'soon' || sale.code === 'closed' ? 'ng' : '';
+  // 고른 모드의 보장 줄만 (고수온 모드 = 🌡 고수온 · 저수온 모드 = ❄ 저수온)
+  const facts = [`<dt class="${MR.id}">${MR.icon} ${MR.word} 보장</dt><dd class="${MR.id}">${apiHeatLine(Hh)}</dd>`];
+  if(ct){
+    facts.push(`<dt>보험기간</dt><dd>${esc(ct.start_date)} ~ ${esc(ct.end_date)}${ct.days_left != null && ct.days_left >= 0 ? ` (만기 D-${ct.days_left})` : ''} · ${esc(ct.status)}</dd>`);
+    facts.push(`<dt>가입금액</dt><dd>${eok(ct.coverage_amount)}${ct.plan ? ` · ${esc(ct.plan)}` : ''}${ct.deductible_rate != null ? ` · 자기부담 ${pct(ct.deductible_rate)}` : ''}</dd>`);
+    facts.push(`<dt>특약</dt><dd>${ct.riders.length ? ct.riders.map(esc).join('<br>') : '없음'}</dd>`);
+    if(ct.premium && ct.premium.total_premium != null)
+      facts.push(`<dt>보험료</dt><dd>${won(ct.premium.total_premium)}${ct.premium.installment ? ' · 분납' + (ct.premium.plans || []).map(p => ` ${p.times}회`).join('/') + ' 가능' : ''}</dd>`);
+    if(ct.policy_number) facts.push(`<dt>증권번호</dt><dd>${esc(ct.policy_number)}</dd>`);
+  }
+  if(c.expired) facts.push(`<dt>이전 계약</dt><dd>${esc(c.expired.product_name || '')} · <b class="ng">${esc(c.expired.end_date)} ${esc(c.expired.status)}</b></dd>`);
+  if(!ct && c.product){
+    facts.push(`<dt>추천 상품</dt><dd>${esc(P.product_name)}${(c.alternatives || []).length ? ` <span class="note">(그 밖에 ${c.alternatives.map(a => esc(a.product_name)).join(', ')})</span>` : ''}</dd>`);
+    facts.push(`<dt>판매기간</dt><dd><b>${esc(saleShort(P.sale_period, c.species))}</b> → <b class="${saleCls}">${esc(sale.text || '확인 필요')}</b>${moreText(P.sale_period)}</dd>`);
+    if(P.subsidy) facts.push(`<dt>보험료 지원</dt><dd>${/국가/.test(P.subsidy) ? '보험료 일부를 <b>국가가 보조</b>해요' : esc(P.subsidy)}${/국가/.test(P.subsidy) ? moreText(P.subsidy) : ''}</dd>`);
+  }
+  facts.push(`<dt>${MR.hot ? '한계 수온' : '기준 수온'}</dt><dd class="${c.risk.hit ? 'ng' : ''}">${esc(c.risk.text).replace(/\d+(?:\.\d+)?℃/g, '<b>$&</b>')}</dd>`);
+  const rec = R.title ? `<div class="rec ${R.level}"><b>추천 · ${esc(R.title)}</b>${(R.actions || []).length ? `<ul>${R.actions.map(a => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}</div>` : '';
+  const quote = ['none','expired','norider'].includes(c.ins)
+    ? `<div class="ctr-q"><label>견적 <input data-aquote="${c.mapping_id}" type="number" min="0" inputmode="numeric" placeholder="입력"> 만 원</label><span>내 부담 약 <b data-amine="${c.mapping_id}">–</b></span></div>` : '';
+  const SC = c.scenarios;
+  const scRows = SC && (SC.rows || []).length;
+  let est = '';
+  if(SC && SC.kind === 'compare'){
+    est = `<div class="est sc-cmp">
+      <div class="scb-h">${MR.word} 피해 정도별 예상 보험금 <span class="src-tag">예시</span></div>
+      <div class="scb-sub">${SC.amount ? `가입금액 ${eok(SC.amount)} 기준${SC.basis ? ` (${esc(String(SC.basis).replace(/\s*가입금액/, ''))})` : ''} · ` : ''}막대 전체 길이 = 손해액</div>
+      ${scRows ? scBars(SC.rows, `${esc(pastAction(SC.action))} 받는 보험금`) : ''}
+      ${apiData && apiData.sea.alert ? `<p class="note ng">${esc(apiData.sea.alert.type || '특보')} 발령 중이라 지금 가입해도 이번 피해는 보상되지 않아요 · 다음 피해부터 적용</p>` : ''}
+      ${!scRows && !SC.error ? '<p class="note">비교할 가입금액 자료가 없어요</p>' : ''}${SC.error ? `<p class="note">${esc(SC.error)}</p>` : ''}
+    </div>`;
+  } else if(SC && SC.kind === 'uncovered'){
+    const full = scRows ? SC.rows[SC.rows.length - 1] : null;
+    est = `<div class="est sc-ins"><b class="ng">${MR.word} 피해가 나면 손해 전액 어가 부담</b>${full ? ` <span class="note">· 피해 ${Math.round(full.rate * 100)}%면 약 ${eok(full.loss)}</span>` : ''}</div>`;
+  } else if(SC && SC.kind === 'insured'){
+    est = `<div class="est sc-ins">
+      <div class="scb-h">${MR.word} 피해 정도별 예상 보험금 <span class="src-tag">예시</span></div>
+      <div class="scb-sub">${ct && ct.coverage_amount ? `가입금액 ${eok(ct.coverage_amount)} 기준 · ` : ''}막대 전체 길이 = 손해액</div>
+      ${scRows ? scBars(SC.rows, '받는 보험금') : ''}${SC.error ? `<p class="note">${esc(SC.error)}</p>` : ''}
+    </div>`;
+  }
+  return `<div class="ctr-card">
+    <div class="ctr-h"><span class="ctr-no">${k+1}</span><b>${esc(c.species)}</b>${c.is_primary ? '<span class="src-tag">대표</span>' : ''}<span class="note">${esc(c.method || '')}${c.production_ratio != null ? ` · 생산 ${Number(c.production_ratio)}%` : ''}</span>
+      <span class="${API_INS_CLS[c.ins]}" style="margin-left:auto">${esc(c.ins_label)}</span></div>
+    <dl class="facts">${facts.join('')}</dl>
+    ${rec}${est}${quote}
+  </div>`;
+}
+
+function updateApiCalc(){
+  let total = 0, any = false;
+  document.querySelectorAll('#brief [data-aquote]').forEach(inp => {
+    const id = inp.dataset.aquote, q = parseFloat(inp.value), m = mine(q);
+    apiQuotes[id] = q > 0 ? q : null;
+    document.querySelector(`#brief [data-amine="${id}"]`).textContent = m == null ? '–' : money(m) + '만 원';
+    if(m != null){ total += m; any = true; }
+  });
+  showBurden(any ? total : null);
+}
+
+async function runEstimate(btn){
+  const box = btn.closest('.est'), out = box.querySelector('.est-out');
+  const body = {insurance_id:+btn.dataset.ins, mapping_id:+btn.dataset.map};
+  box.querySelectorAll('[data-est]').forEach(i => { if(i.value !== '') body[i.dataset.est] = +i.value; });
+  out.textContent = '계산 중…';
+  try{
+    const r = await apiPost(`/api/households/${apiSel}/claim-estimate`, body);
+    if(!r.covered){ out.innerHTML = `<span class="ng">보상 대상 아님</span> · ${(r.not_covered_reasons || []).map(esc).join(' · ')}`; return; }
+    const x = r.result;
+    const zeroWhy = Number(x.payout) === 0 && Number(x.deductible) >= Number(x.calculated)
+      ? '<br><span class="ng">자기부담금이 손해액보다 커서 지급액이 0원이에요 (최저 자기부담 = 가입금액의 1~2%)</span>' : '';
+    out.innerHTML = `<b>지급 예상 ${won(x.payout)}</b> · 손해액 ${won(x.loss)} · 자기부담 ${won(x.deductible)}${x.farmer_burden != null && Number(x.farmer_burden) !== Number(x.deductible) ? ` · 어가 부담 ${won(x.farmer_burden)}` : ''}${zeroWhy}
+      <br><span class="note">${esc(r.rule ? r.rule.coverage_name : '')}${r.applied_price ? ` · 적용가격 ${won(r.applied_price.price)}/${r.applied_price.unit === 'KRW_PER_KG' ? 'kg' : '마리'}` : ''}${(r.warnings || []).length ? ' · ' + r.warnings.map(esc).join(' · ') : ''}</span>`;
+  }catch(e){
+    const b = e.body || {};
+    const extra = b.price_variants ? ` (가격 구분: ${b.price_variants.map(esc).join(', ')})` : '';
+    out.innerHTML = `<span class="ng">${esc(e.message)}</span>${extra}`;
+  }
+}
+
+async function saveApiLog(){
+  if(!apiData || apiData.household.household_id !== apiSel){ toast('선택한 어가 정보를 다시 불러온 뒤 저장해 주세요.'); return; }
+  const householdId = apiSel, savedData = apiData;
+  const status = document.getElementById('r-status').value;
+  const nx = document.getElementById('r-next').value;   // datetime-local: 'YYYY-MM-DDTHH:MM' (초가 붙을 수도 있음)
+  if(status === '상담 예약' && !nx){ toast('상담 예약은 상담일을 넣어 주세요.'); document.getElementById('r-next').focus(); return; }
+  // 시간대가 없는 값은 서버가 한국 시간(KST)으로 저장해요
+  const body = {result_status:status, channel:'전화', memo:document.getElementById('r-memo').value.trim() || null,
+                staff_name:document.getElementById('r-staff').value.trim() || null,
+                next_contact_at: nx ? (nx.length === 16 ? nx + ':00' : nx) : null, items:[]};
+  document.querySelectorAll('#brief-side [data-ares]').forEach(s => {
+    if(s.value) body.items.push({mapping_id:+s.dataset.ares, result:s.value, insurance_id:s.dataset.ins ? +s.dataset.ins : null});
+  });
+  try{
+    const r = await apiPost(`/api/households/${householdId}/consult-logs`, body);
+    if(apiSel !== householdId || apiData !== savedData || detailMode !== 'api') return;
+    apiData.consult = r.consult;
+    toast(`${apiData.household.owner_name} 상담 결과 저장 · ${status}`);
+    if(window.Shell) Shell.reloadNoti();   // 상담 예약·가입 완료는 알림에 바로 보여요
+    renderApiDetail();
+  }catch(e){ toast('저장하지 못했어요 · ' + e.message); }
+}
+
+/* ===== 수온 예측 ===== */
+function renderForecast(){
+  const I = regionInfo[fcRegion];
+  document.getElementById('fc-sub').textContent = `${fcRegion}${fcRegion === homeRegion ? '' : ' (어가 지역)'} · ${md(0)}~${md(20)} · 일최고 수온`;
+
+  document.getElementById('fc-chart').innerHTML = chartSvg(I, fcPick);
+  renderForecastSide(I);
+}
+
+// 21일 그래프 (홈은 still: 점 선택 없이 보기만)
+function chartSvg(I, pick, o = {}){
+  const fcRegion = I.id;
+  const pts = I.series, fcPick = pick;
+  const W = 900, H = o.h || 300, L = 46, R = 16, T = 28, B = 40, pW = W - L - R, pH = H - T - B;
+  const temps = pts.map(p => p[MR.key]).concat([MR.watch, MR.warn]);
+  const lo = Math.floor(Math.min(...temps) - 0.5), hi = Math.ceil(Math.max(...temps) + 0.5);
+  const x = i => L + i / 20 * pW, y = v => T + (hi - v) / (hi - lo) * pH;
+  const step = hi - lo > 6 ? 2 : 1;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${fcRegion} 21일 수온 예측 그래프">`;
+  svg += `<rect class="g-band" x="${x(6.5)}" y="${T}" width="${W - R - x(6.5)}" height="${pH}"/>`;
+  svg += `<text class="g-head r" x="${x(3)}" y="16" text-anchor="middle">1~7일 · ROMS 대응 검토</text>`;
+  svg += `<text class="g-head o" x="${x(13.75)}" y="16" text-anchor="middle">8~21일 · ECMWF 보정 · 참고만</text>`;
+  for(let v = lo; v <= hi; v += step){
+    svg += `<line class="g-line" x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}"/><text class="g-txt" x="${L-8}" y="${y(v)+4}" text-anchor="end">${v}°</text>`;
+  }
+  [[MR.watch,'th25','관심'],[MR.warn,'th28','주의']].forEach(([v,c,lb]) => {
+    svg += `<line class="${c}" x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}"/><text class="${c}t" x="${L+6}" y="${y(v)-5}" text-anchor="start" font-weight="700">${lb} ${v}℃</text>`;
+  });
+  for(let i = 0; i <= 20; i += 2) svg += `<text class="g-txt" x="${x(i)}" y="${H - B + 20}" text-anchor="middle">${md(i)}</text>`;
+  const v = p => p[MR.key];
+  const line = arr => arr.map(p => `${x(p.i)},${y(v(p))}`).join(' ');
+  svg += `<polyline class="s-roms" points="${line(pts.filter(p => p.src==='ROMS'))}"/>`;
+  // 7일→8일 사이 끊김 없이 이어 그림
+  svg += `<polyline class="s-om" points="${line([pts[6]].concat(pts.filter(p => p.src==='ECMWF')))}"/>`;
+  pts.forEach(p => {
+    const on = p.i === fcPick;
+    svg += o.still
+      ? `<circle class="pt ${p.src==='ROMS'?'r':'o'}" style="cursor:default" cx="${x(p.i)}" cy="${y(v(p))}" r="3.5"><title>${mdw(p.i)} ${v(p).toFixed(1)}℃ · ${p.src}</title></circle>`
+      : `<circle class="pt ${p.src==='ROMS'?'r':'o'}" data-pt="${p.i}" tabindex="0" cx="${x(p.i)}" cy="${y(v(p))}" r="${on?7:4.5}"><title>${mdw(p.i)} ${v(p).toFixed(1)}℃ · ${p.src}</title></circle>`;
+  });
+  return svg + '</svg>';
+}
+
+function renderForecastSide(I){
+  const pts = I.series;
+  const p = pts[fcPick];
+  document.getElementById('fc-pick').innerHTML = `<b>${mdw(p.i)} · 최고 ${p.max.toFixed(1)}℃</b> (평균 ${p.mean.toFixed(1)}℃ · 최저 ${p.min.toFixed(1)}℃)　<span class="note">${p.src==='ROMS'
+    ? `ROMS 모델값 · 대응 검토 · ${STAGE[I.st[p.i]]}`
+    : 'ECMWF 지역별 보정값 · 흐름 참고만'}</span> · 그래프의 점을 누르면 날짜별 값이 보여요`;
+
+  const first = I.top >= 1 ? `${mdw(I.d)} (D-${I.d})` : '없음';
+  document.getElementById('fc-summary').innerHTML = `
+    <li><span>예상 단계</span><span class="badge s${I.top}">${STAGE_ICON[I.top]} ${STAGE[I.top]}</span></li>
+    <li><span>오늘 ${MR.val} 예측</span><b>${I.t[0].toFixed(1)}℃</b></li>
+    <li><span>7일 ${MR.val}</span><b>${I.maxT.toFixed(1)}℃ · ${md(I.dMax)}</b></li>
+    <li><span>${STAGE[I.top]} 첫 예상일</span><b>${first}</b></li>
+    <li><span>2~3주 흐름</span><b>${TREND[I.trend]}</b></li>
+`;
+  document.getElementById('fc-species').innerHTML = Object.entries(SPECIES_LIMIT).map(([s,v]) => {
+    const reach = I.t.findIndex(t => Shell.reach(t, v));
+    return `<li><span>${s}</span><b>${v}℃ ${reach >= 0 ? `<span class="sp-hit">· ${fcRegion} D-${reach} 도달</span>` : ''}</b></li>`;
+  }).join('');
+
+  const table = (rows, stage) => `<div class="tbl-wrap"><table><thead><tr><th>날짜</th>${stage?'<th>단계</th>':''}<th class="num">최고℃</th><th class="num">평균℃</th><th class="num">최저℃</th></tr></thead><tbody>${
+    rows.map(r => `<tr><td>${mdw(r.i)}</td>${stage?`<td><span class="badge s${I.st[r.i]}">${STAGE[I.st[r.i]]}</span></td>`:''}<td class="num"><b>${r.max.toFixed(1)}</b></td><td class="num">${r.mean.toFixed(1)}</td><td class="num">${r.min.toFixed(1)}</td></tr>`).join('')
+  }</tbody></table></div>`;
+  document.getElementById('fc-tables').innerHTML =
+    `<div><h3>1~7일 · ROMS (대응 검토)</h3>${table(pts.filter(p => p.src==='ROMS'), true)}</div>
+     <div><h3>8~21일 · ECMWF 보정 (참고만)</h3>${table(pts.filter(p => p.src==='ECMWF'), false)}</div>`;
+}
+
+/* ===== 고객 상담 현황 ===== */
+function matchQ(f){
+  if(!q) return true;
+  const digits = q.replace(/\D/g, '');
+  return f.name.includes(q) || f.items.some(c => c.species.includes(q)) || f.id.toLowerCase().includes(q.toLowerCase())
+      || (digits.length >= 2 && f.phone.replace(/\D/g, '').includes(digits));
+}
+
+function renderConsult(){
+  const custs = farms.filter(matchQ);
+  if(histFarm && !custs.some(f => f.id === histFarm)) histFarm = null;
+  document.getElementById('q-count').textContent = q ? `${custs.length}명` : `전체 ${farms.length}명`;
+  document.getElementById('cust-empty').hidden = custs.length > 0;
+  document.getElementById('cust-rows').innerHTML = custs.map(f => {
+    const st = fStage(f), last = f.hist[f.hist.length - 1];
+    const stCls = f.status === 'todo' ? 'todo' : f.status === 'book' ? 'book' : f.status === 'win' ? 'win' : '';
+    return `<tr class="pick-row" data-cust="${f.id}" tabindex="0" aria-selected="${histFarm===f.id}">
+      <td class="who"><b>${esc(f.name)}</b><small>${f.id}</small></td>
+      <td>${f.phone}</td>
+      <td>${f.consent ? '<span class="consent-y">○</span>' : '<span class="consent-n">× 미동의</span>'}</td>
+      <td>${esc(f.region)}</td>
+      <td>${ctrLines(f)}</td>
+      <td><span class="badge s${st}">${STAGE_ICON[st]} ${STAGE[st]}</span></td>
+      <td><span class="st ${stCls}">${STATUS[f.status]}</span></td>
+      <td>${last ? last.at : '–'}</td>
+      <td class="num">${f.hist.length}</td>
+      <td><button type="button" class="btn sm" data-open="${f.id}">열기</button></td>
+    </tr>`;
+  }).join('');
+
+  const pool = histFarm ? farms.filter(f => f.id === histFarm) : custs;
+  const items = [];
+  pool.forEach(f => f.hist.forEach((h,i) => items.push({f, h, i})));
+  items.sort((a,b) => b.h.at.localeCompare(a.h.at) || b.i - a.i);
+  const hf = farms.find(f => f.id === histFarm);
+  document.getElementById('hist-sub').textContent = hf ? `${hf.name} (${hf.id}) · ${items.length}건 · 최근 순` : `${items.length}건 · 최근 순`;
+  document.getElementById('hist-filter').innerHTML = hf ? `<button type="button" class="chip" data-hist-all aria-pressed="true">${esc(hf.name)} ✕ 전체 보기</button>` : '';
+  document.getElementById('hist-empty').hidden = items.length > 0;
+  document.getElementById('hist-rows').innerHTML = items.map(({f,h}) => `<tr>
+      <td>${h.at}</td>
+      <td class="who"><b>${esc(f.name)}</b><small>${f.id}</small></td>
+      <td>${esc(f.region)} · ${f.items.map(c => esc(c.species)).join(' · ')}</td>
+      <td class="hist-res">${esc(h.result)}</td>
+      <td>${esc(h.text)}</td>
+    </tr>`).join('');
+}
+
+/* ===== 공통 ===== */
+let toastT;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2600);
+}
+
+function showPage(p){
+  if(p === 'forecast'){ location.href = 'sea_forecast.html?region=' + encodeURIComponent(fcRegion); return; }
+  if(p === 'home'){ location.href = 'consult_home.html'; return; }   // 상담 홈은 막대그래프가 있는 consult_home.html로 이동
+  if(p === 'consult'){ location.href = 'consult_status.html'; return; }   // 고객 상담 현황은 consult_status.html 한 곳에서 (지역 거르기도 그 파일에서)
+  page = p;
+  document.querySelectorAll('[data-page-section]').forEach(s => s.hidden = s.dataset.pageSection !== p);
+  document.querySelectorAll('.nav[data-page]').forEach(b => { if(b.dataset.page === p) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+  try{ history.replaceState(null, '', '#' + p); }catch(e){}
+  if(p === 'detail') renderBrief();
+  if(p === 'forecast') renderForecast();
+  if(p === 'consult') renderConsult();
+  window.scrollTo(0, 0);
+}
+
+function renderHome(){ renderKpis(); renderHomeTemp(); renderFilters(); renderRows(); renderBrief(); }
+function select(id){ selected = id; detailMode = 'mock'; renderRows(); renderBrief(); }
+function openDetail(id){ select(id); showPage('detail'); }
+
+/* ===== 이벤트 ===== */
+document.querySelector('.side').addEventListener('click', e => {
+  const b = e.target.closest('[data-page]'); if(b) showPage(b.dataset.page);
+});
+
+document.querySelector('.home-top').addEventListener('click', e => {
+  const g = e.target.closest('[data-goto-fc]');
+  if(g){ fcRegion = g.dataset.gotoFc; fcPick = 0; showPage('forecast'); }
+});
+// 맨 위 '담당' 지역을 바꾸면 홈 수온·수온 예측·지역 필터가 함께 바뀌어요
+// 담당 지역은 다른 화면(consult_home·sea_forecast)과 같은 이름으로 이 브라우저에 저장해 화면을 옮겨도 유지
+const OFFICE_KEY = 'heat-dashboard-office';
+function getOffice(){ try{ return localStorage.getItem(OFFICE_KEY) || '통영'; }catch(e){ return '통영'; } }
+function putOffice(id){ try{ localStorage.setItem(OFFICE_KEY, id); }catch(e){} }
+// 담당 지역 목록은 홈과 같이 수온 예측이 있는 지역으로 채워요
+function fillOffice(current){
+  const sel = document.getElementById('office');
+  sel.innerHTML = Object.keys(regionInfo).map(id => `<option value="${esc(id)}">${esc(id)} 지역 담당</option>`).join('');
+  const id = regionInfo[current] ? current : Object.keys(regionInfo)[0];
+  sel.value = id;
+  return id;
+}
+const hasOffice = id => [...document.getElementById('office').options].some(o => o.value === id);
+function setOffice(id){
+  putOffice(id);
+  homeRegion = fcRegion = id; fcPick = 0;
+  document.getElementById('office').value = id;
+  if(filter.region) filter.region = id;
+  renderHomeTemp(); renderFilters(); renderRows();
+  if(page === 'forecast') renderForecast();
+  if(apiOk){   // 어가 선택을 새 담당 지역 어가로
+    if(!regionHouseholds().some(h => h.household_id === apiSel)) apiSel = regionHouseholds()[0]?.household_id ?? null;
+    if(page === 'detail') renderBrief(); else renderPicker();
+  }
+}
+document.getElementById('office').addEventListener('change', e => setOffice(e.target.value));
+// 가상 데이터 시연 기록을 지우고 처음 상태로
+document.getElementById('reset').addEventListener('click', () => {
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  location.reload();
+});
+document.getElementById('filters').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  if(b.hasAttribute('data-clear')) filter.region = null;
+  else if(b.dataset.reg) filter.region = b.dataset.reg;
+  else filter.only = b.dataset.only;
+  renderFilters(); renderRows();
+});
+document.getElementById('back-home').addEventListener('click', () => showPage('home'));
+document.getElementById('bulk-preview').addEventListener('input', e => {
+  bulkText = e.target.value; updateBulkLen();
+  document.getElementById('bulk-sms').disabled = ![...picked].some(id => farms.find(f => f.id === id)?.consent) || !bulkText.trim();
+});
+document.getElementById('bulk-panel').addEventListener('click', e => {
+  const t = e.target.closest('[data-btpl]');
+  if(t){ bulkTpl = t.dataset.btpl; bulkText = BULK_TPL[bulkTpl].text; renderBulk(); return; }
+  const u = e.target.closest('[data-unpick]');
+  if(u){ picked.delete(u.dataset.unpick); renderRows(); }
+});
+const rowsEl = document.getElementById('rows');
+rowsEl.addEventListener('click', e => {
+  const ck = e.target.closest('[data-ck]');
+  if(ck){ if(ck.checked) picked.add(ck.dataset.ck); else picked.delete(ck.dataset.ck); renderBulk(); return; }
+  if(e.target.closest('td.ck')) return;
+  const tr = e.target.closest('tr[data-id]'); if(tr) openDetail(tr.dataset.id);
+});
+document.getElementById('ck-all').addEventListener('change', e => {
+  const rows = sorted().filter(pass);
+  rows.forEach(f => e.target.checked ? picked.add(f.id) : picked.delete(f.id));
+  renderRows();
+});
+document.getElementById('bulk-sms').addEventListener('click', () => {
+  let sent = 0, skip = 0;
+  picked.forEach(id => {
+    const f = farms.find(x => x.id === id); if(!f) return;
+    if(!f.consent){ skip++; return; }
+    f.hist.push({at:'2026-10-22', result:'문자 발송', text:'일괄 발송 · ' + (bulkText === BULK_TPL[bulkTpl].text ? BULK_TPL[bulkTpl].label : BULK_TPL[bulkTpl].label + ' (수정)')});
+    if(f.status === 'todo' || f.status === 'absent') f.status = 'sms';
+    sent++;
+  });
+  picked.clear(); save();
+  toast(`${sent}곳에 문자 발송 기록 · 실제 발송 안 함` + (skip ? ` · 수신 미동의 ${skip}곳은 빼고 전화 목록에 남겼어요` : ''));
+  renderKpis(); renderRows(); renderBrief();
+});
+/* ===== 알림 =====
+   상단 바의 알림 종은 공통 shell.js 가 맡아요. 어가 알림을 누르면 모든 화면에서 같이
+   고객 상담 현황(consult_status.html?cust=어가번호)으로 가서 그 고객이 선택돼요. */
+const pushNoti = n => window.Shell && Shell.push(n);   // 가상 예시 저장 때 이 화면에만 알림 추가
+rowsEl.addEventListener('keydown', e => {
+  const tr = e.target.closest('tr[data-id]'); if(!tr) return;
+  if(e.target.closest('td.ck')) return;
+  if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openDetail(tr.dataset.id); }
+  if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault();
+    const sib = e.key === 'ArrowDown' ? tr.nextElementSibling : tr.previousElementSibling; if(sib) sib.focus(); }
+});
+
+// 어가 상세 이벤트 (왼쪽 브리핑 + 오른쪽 상담 진행을 함께 받음)
+const detailEl = document.getElementById('page-detail');
+document.getElementById('hh-pick').addEventListener('change', e => {
+  if(!e.target.value) return;
+  detailMode = 'api'; apiSel = +e.target.value; renderBrief();
+});
+// 멘트에 붙여넣을 때는 글자만 (다른 곳의 서식·링크가 섞이지 않게)
+detailEl.addEventListener('paste', e => {
+  if(!e.target.closest || !e.target.closest('[data-script-key]')) return;
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+  const sel = window.getSelection(); if(!sel.rangeCount) return;
+  const range = sel.getRangeAt(0); range.deleteContents();
+  const node = document.createTextNode(text); range.insertNode(node);
+  range.setStartAfter(node); range.collapse(true); sel.removeAllRanges(); sel.addRange(range);
+  e.target.closest('[data-script-key]').dispatchEvent(new Event('input', {bubbles:true}));
+});
+detailEl.addEventListener('input', e => {
+  const sc = e.target.closest && e.target.closest('[data-script-key]');
+  if(sc){
+    const k = sc.dataset.scriptKey;
+    // [예상 부담] 자리에 금액이 채워진 것은 수정으로 보지 않아요
+    const norm = h => h.replace(/(<b id="s-burden">)[\s\S]*?(<\/b>)/, '$1[예상 부담]$2');
+    if(norm(sc.innerHTML) === norm(scriptOrig[k])) delete scriptEdits[k]; else scriptEdits[k] = sc.innerHTML;
+    scriptFlag(k); return;
+  }
+  if(e.target.matches('[data-gdead], [data-gsize], #gov-rate')) return govCalc();
+  if(e.target.matches('[data-aquote]')) return updateApiCalc();
+  const f = farms.find(x => x.id === selected); if(!f) return;
+  if(e.target.matches('[data-quote]')) updateCalc(f);
+});
+detailEl.addEventListener('toggle', e => {
+  const key = e.target.dataset && e.target.dataset.key; if(!key) return;
+  if(e.target.open) openSecs.add(key); else openSecs.delete(key);
+}, true);
+detailEl.addEventListener('click', async e => {
+  const g = e.target.closest('[data-goto-fc]');
+  if(g){ fcRegion = g.dataset.gotoFc; fcPick = 0; showPage('forecast'); return; }
+  if(e.target.closest('[data-script-reset]')){
+    const sc = document.querySelector('#brief-side [data-script-key]'); if(!sc) return;
+    const k = sc.dataset.scriptKey;
+    delete scriptEdits[k]; sc.innerHTML = scriptOrig[k]; scriptFlag(k);
+    if(detailMode === 'api') updateApiCalc(); else { const f0 = farms.find(x => x.id === selected); if(f0) updateCalc(f0); }   // [예상 부담] 다시 채우기
+    toast('원래 멘트로 되돌렸어요'); return;
+  }
+  if(e.target.closest('[data-script-copy]')){
+    const sc = document.querySelector('#brief-side [data-script-key]'); if(!sc) return;
+    const text = sc.innerText.trim();
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+      .then(() => toast('멘트를 복사했어요'), () => toast('복사하지 못했어요 · 멘트를 직접 선택해 복사해 주세요'));
+    return;
+  }
+  const a = e.target.closest('[data-act]'); if(!a) return;
+  // DB 어가: 결과 기록 → POST /api/households/{id}/consult-logs (consult_cases · consult_logs · consult_log_items)
+  if(a.dataset.act === 'api-save'){
+    if(a.disabled) return;
+    a.disabled = true;
+    try{ await saveApiLog(); } finally { a.disabled = false; }
+    return;
+  }
+  if(a.dataset.act === 'call' && detailMode === 'api'){
+    const H = apiData && apiData.household;
+    toast(`${H ? H.owner_name + (H.phone_masked ? ` (${H.phone_masked})` : '') : '어가'}에게 전화 연결 · 시연이라 실제로 걸리지 않아요`);
+    openSecs.add('record'); document.getElementById('acc-record').open = true;
+    document.getElementById('r-status').focus();
+    return;
+  }
+  const f = farms.find(x => x.id === selected); if(!f) return;   // 가상 예시 어가
+  if(a.dataset.act === 'call'){
+    toast(`${f.name} (${f.phone})에게 전화 연결 · 시연이라 실제로 걸리지 않아요`);
+    openSecs.add('record'); document.getElementById('acc-record').open = true;
+    document.getElementById('r-status').focus();
+  }
+  if(a.dataset.act === 'sms'){
+    const status = f.status === 'todo' || f.status === 'absent' ? 'sms' : f.status;
+    a.disabled = true;
+    try{ await recordLog(f, {status, channel:'문자', memo:TEMPLATES[tpl].label, next:f.next}); }
+    catch(err){ a.disabled = false; toast('저장하지 못했어요 · ' + err.message); return; }
+    f.status = status; save();
+    toast('테스트 문자를 보냈다고 기록했어요 · 실제 발송 안 함');
+    renderBrief();
+  }
+  if(a.dataset.act === 'save'){
+    const st = document.getElementById('r-status').value;
+    const next = document.getElementById('r-next').value;
+    const memo = document.getElementById('r-memo').value.trim();
+    f.status = st;
+    // 계약(어종)마다 결과 저장
+    const done = [];
+    document.querySelectorAll('#brief-side [data-res]').forEach(s => {
+      const c = f.items[+s.dataset.res]; if(!s.value) return;
+      if(s.value === 'win' && c.res !== 'win'){ c.res = 'win'; c.ins = 'full'; done.push(c.species + ' 가입');
+        pushNoti({ty:'join', lbl:'가입 완료', farm:f.id, text:`${f.name} · ${c.species} ${PRODUCTS[c.p].name} 가입 완료`}); }
+      if(s.value === 'hold' && c.res !== 'hold'){ c.res = 'hold'; done.push(c.species + ' 보류'); }
+    });
+    if(done.length && f.items.every(c => c.ins === 'full')) f.status = 'win';
+    if(st === 'book') pushNoti({ty:'apply', lbl:'상담 예약', farm:f.id, text:`${f.name} · 상담 예약 등록${next ? ' (' + next.slice(5).replace('-','/') + ')' : ''}`});
+    if(next) f.next = next;
+    else if(st === 'absent'){ f.next = '2026-10-23'; }
+    f.hist.push({at:'2026-10-22', result:STATUS[f.status], text:[done.join(', '), next && `다음 ${next}`, memo].filter(Boolean).join(' · ') || '–'});
+    save();
+    const nextFarm = sorted().find(x => ACTIVE.includes(x.status) && x.id !== f.id);
+    toast(`${f.name} 결과 저장` + (mode === 'db' ? ' · DB에 기록했어요' : ' · 가상 데이터라 이 브라우저에만 기록했어요'));
+    if(nextFarm) select(nextFarm.id); else renderBrief();
+  }
+});
+
+// 고객 상담 현황: 검색·열기·행 선택 (PR #41 병합 때 빠진 코드 복구)
+document.getElementById('q').addEventListener('input', e => { q = e.target.value.trim(); renderConsult(); });
+const consultEl = document.getElementById('page-consult');
+consultEl.addEventListener('click', e => {
+  const o = e.target.closest('[data-open]');
+  if(o){
+    // DB 어가 목록에 있으면 DB 브리핑으로 열기 (없으면 기존처럼 가상 예시)
+    const hid = Number(o.dataset.open);
+    const h = apiList.find(x => x.household_id === hid);
+    if(h){ apiSel = hid; detailMode = 'api'; if(h.region !== homeRegion && hasOffice(h.region)) setOffice(h.region); showPage('detail'); return; }
+    openDetail(o.dataset.open);
+    if(!listed().some(f => f.id === o.dataset.open)) toast('주의 단계가 아니라 연락 순서 목록에는 없지만 상세는 볼 수 있어요');
+    return; }
+  if(e.target.closest('[data-hist-all]')){ histFarm = null; renderConsult(); return; }
+  const tr = e.target.closest('tr[data-cust]');
+  if(tr){ histFarm = histFarm === tr.dataset.cust ? null : tr.dataset.cust; renderConsult(); }
+});
+consultEl.addEventListener('keydown', e => {
+  const tr = e.target.closest('tr[data-cust]');
+  if(tr && (e.key === 'Enter' || e.key === ' ') && !e.target.closest('button')){ e.preventDefault(); histFarm = histFarm === tr.dataset.cust ? null : tr.dataset.cust; renderConsult(); }
+});
+
+/* ===== 시작 ===== */
+async function startDetailPage(){
+  homeRegion = fcRegion = getOffice();
+  const startPage = ['home','detail','forecast','consult'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'detail';
+  if(startPage !== 'detail'){ showPage(startPage); return; }
+  const farmsReady = loadFarms();
+  const apiReady = initApi();
+  showPage(startPage);
+  await farmsReady;
+  const startOffice = fillOffice(homeRegion);
+  if(startOffice){
+    const changed = startOffice !== homeRegion;
+    homeRegion = fcRegion = startOffice; putOffice(startOffice);
+    if(changed && apiOk && !new URLSearchParams(location.search).has('id')) apiSel = regionHouseholds()[0]?.household_id ?? null;
+  }
+  if(!selected && sorted().length) selected = sorted()[0].id;
+  renderHome();
+  await apiReady;
+}
+startDetailPage();
+
+/* ===== 계약별 보험: 어종이 2개 이상이면 한 장씩 넘겨 보기 (탭 · ‹ › 버튼 · 키보드 ← →, 옆으로 밀어 넘기기는 없음) ===== */
+let ctrSlideAt = {};   // 어가별로 마지막에 보던 카드 번호 (다시 그려져도 유지)
+function initCtrSlider(){
+  const box = document.querySelector('#brief .ctr-cards');
+  if(!box || box.dataset.slider) return;
+  const cards = [...box.children].filter(c => c.classList.contains('ctr-card'));
+  if(cards.length < 2) return;
+  box.dataset.slider = '1';
+  const key = (document.querySelector('#brief .b-head h2') || {}).textContent || '';
+  const bar = document.createElement('div'); bar.className = 'sl-bar';
+  bar.innerHTML = `<div class="sl-tabs" role="tablist" aria-label="계약별 보험">${cards.map((c, i) => {
+      const nm = c.querySelector('.ctr-h b')?.textContent || `계약 ${i + 1}`;
+      const st = c.querySelector('.ctr-h [class^="ins"]');
+      return `<button type="button" class="sl-tab" role="tab" data-sl="${i}"><i class="${st ? st.className : ''}"></i>${esc(nm)}</button>`; }).join('')}</div>
+    <span class="sl-n" aria-live="polite"></span>
+    <button type="button" class="sl-nav" data-sl-step="-1" aria-label="이전 계약">‹</button><button type="button" class="sl-nav" data-sl-step="1" aria-label="다음 계약">›</button>`;
+  box.before(bar);
+  const show = i => {
+    i = Math.max(0, Math.min(cards.length - 1, i)); ctrSlideAt[key] = i;
+    cards.forEach((c, k) => { c.hidden = k !== i; c.setAttribute('role', 'tabpanel'); });
+    bar.querySelectorAll('.sl-tab').forEach((t, k) => { t.setAttribute('aria-selected', String(k === i)); t.tabIndex = k === i ? 0 : -1; });
+    bar.querySelector('.sl-n').textContent = `${i + 1} / ${cards.length}`;
+    bar.querySelector('[data-sl-step="-1"]').disabled = i === 0;
+    bar.querySelector('[data-sl-step="1"]').disabled = i === cards.length - 1;
+    return i;
+  };
+  let at = show(ctrSlideAt[key] || 0);
+  bar.addEventListener('click', e => {
+    const t = e.target.closest('[data-sl]'); if(t){ at = show(+t.dataset.sl); return; }
+    const s = e.target.closest('[data-sl-step]'); if(s) at = show(at + +s.dataset.slStep);
+  });
+  bar.addEventListener('keydown', e => {
+    if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault(); at = show(at + (e.key === 'ArrowLeft' ? -1 : 1));
+    bar.querySelector(`.sl-tab[data-sl="${at}"]`).focus();
+  });
+}
+new MutationObserver(initCtrSlider).observe(document.getElementById('brief'), {childList:true});
+</script>
+
+</body></html>

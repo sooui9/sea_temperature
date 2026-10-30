@@ -1,0 +1,105 @@
+/* Figma 「파이널 프로젝트_유료」 디자인 규칙을 네 화면에 입히는 테마
+   각 화면에서 shell.css 다음 줄에 불러와요. 화면 코드는 그대로 두고 값만 덮어써요.
+   규칙: 글꼴 Noto Sans KR · 포인트 #007F98 · 사이드바 #017896 · 카드·버튼 모서리 6px · 배지 3px */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap");
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+
+:root{
+  --bg:#f4f5f7; --line:#e2e8f0; --line-strong:#cbd5e1; --soft:#f7f8fa;
+  --text:#334155; --sub:#475569; --muted:#64748b;
+  --accent:#007f98; --accent-soft:#e0f2f5;
+  --normal:#157c3c; --normal-soft:#eaf5ef;
+  --alert-soft:#fdeaea;
+  --radius:6px;
+  --side:#017896;
+}
+
+/* 카드·버튼·입력칸·팝업: 6px */
+.top-meta select,.ghost,.bell-panel,.magnifier-lens,.cal-nav button,.cal-d,.cal-ev,
+.ctr-card,.ctr-total,.script,textarea,.btn,.pick,.search input,.toast,body.show-chg .chg-box,
+.alert-box,.notice,.ht-hl,.confirm,.confirm .sum,.confirm .warn,.gov-sub,.gov-card,.hh-pick select,
+.tnow>div,.rec,.sc-cmp,.sl-nav,.ttip,.bias-modal,.bm-tile,.bm-warn{border-radius:6px}
+
+/* 상태 배지: 3px */
+.ins,.st,.cal-st,.pts i,.tag-why,.need,.ht-pill,.script-h .edited,.gov-tag,.src-tag,.bm-tag,
+.bell-list .ty,.hist-res{border-radius:3px}
+
+/* 글자 크기: Figma 단계(11·12·13·14·15·16·20·26)로 */
+.ins,.home-top .chip,.bp-picked button,.ht-link,.seg button,.hist-res,.hist-who small,
+.sc th,.sc td,.sl-n,.ttip .sub,.bm-tile .s,.cal-nav button{font-size:12px}
+.ctr-line small,.cal-all,.gd-badge,.ht-note,.sig .dd,.bias-chip,.bm-tag{font-size:11px}
+.cal-ev,.ht-list,.bm-warn,.bm-ex{font-size:13px}
+.confirm h4,.bm-head h3{font-size:16px}
+
+/* 보험 상태 배지 색 */
+.ins-ok{background:#eaf5ef;color:#157c3c;border-color:#bbe5c8}
+.ins-gap{background:#fff1b8}
+.ins-none{background:#fdeaea;border-color:#f5c2bd}
+.ty.join{background:#eaf5ef;color:#157c3c}
+
+/* 왼쪽 메뉴: 청록 바탕, 선택한 메뉴는 흰 바탕 */
+.side{background:var(--side);align-self:start;padding:18px 0}
+.top,.side{font-family:Pretendard,"Noto Sans KR",sans-serif;font-weight:900}
+.top h1,.side .nav{font-weight:700}
+.top-meta{font-family:"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-weight:400}
+/* 사이드바 폭 196→160px: 가장 긴 메뉴 '고객 상담 현황'도 14px 여유가 남고, 줄어든 만큼 본문이 넓어져요 (900px 이하는 메뉴가 가로라 제외) */
+@media (min-width:901px){.shell{grid-template-columns:160px minmax(0,1fr)}}
+/* 화면이 1440px보다 넓으면 .shell 이 가운데 놓여 왼쪽에 빈 띠가 생겨서, 청록을 화면 왼쪽 끝까지 이어요 */
+.side::before{content:"";position:absolute;top:0;bottom:0;right:100%;width:100vw;background:var(--side)}
+.top h1{font-size:20px;color:#0070bf}
+/* Figma AppHeader: 로고 92×30 · 구분선 1×22 (간격은 .top-in 의 20px) */
+.top .logo{display:block;width:92px;height:30px}
+.top .logo-div{width:1px;height:22px;background:#ccd4de}
+/* 화면 스크립트가 이 배지의 글자를 바꾸므로 지우지 않고 숨겨요 (연결 실패는 화면 위 노란 안내로 보여요) */
+#data-mode{display:none}
+.bell svg{width:18px;height:18px}
+/* Figma: 고객 목록 표와 예측 상세 값 표는 모든 칸 가운데 정렬 */
+#page-consult th,#page-consult td,#fc-tables th,#fc-tables td{text-align:center;vertical-align:middle}
+#page-consult .ctr-line{justify-content:center}
+/* 수신 동의 ○ · ×: 글자 기호는 ○ 이 ×보다 가늘게 그려져서, 같은 선 두께(2.4)의 아이콘으로 맞춰요 */
+.cs-ic{display:inline-block;width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;vertical-align:-2px}
+/* 예측 상세 값: 1~7일 표와 8~21일 표 사이 구분선 (900px 이하는 위아래로 놓여 위쪽 선) */
+#fc-tables{column-gap:32px}
+#fc-tables>div+div{border-left:1px solid var(--line);padding-left:16px;margin-left:-16px}
+@media (max-width:900px){#fc-tables>div+div{border-left:0;padding-left:0;margin-left:0;border-top:1px solid var(--line);padding-top:16px}}
+/* 표 머리칸 배경: 어가 상세 '계약별 보험' 항목 칸과 같은 회색 */
+th{background:var(--soft)}
+/* Figma: 어종 신호등 주의 점은 주황 */
+.sig-0 i,.l0{background:#ea580c}
+.fc-ref-note{margin-top:8px;font-size:11px;color:#64748b}
+/* Figma: 어가 상세 오늘 수온 칸은 제목 옆에 단계 배지 */
+.tnow-head{display:flex;align-items:center;gap:6px}
+.btn .ic-phone{width:16px;height:16px;vertical-align:-3px;margin-right:4px}
+.nav{color:#fff;border-radius:0}
+.nav:hover{background:rgba(255,255,255,.12)}
+.nav[aria-current="page"]{background:#fff;color:var(--accent);box-shadow:none}
+/* 위 .side::before 청록 띠까지가 눈에 보이는 사이드바라서, 선택 메뉴 흰 바탕도 그 띠 위로 같은 폭만큼 이어요
+   (900px 이하는 메뉴가 가로로 놓여 옆 메뉴를 덮으므로 제외) */
+@media (min-width:901px){
+  .nav[aria-current="page"]{position:relative}
+  .nav[aria-current="page"]::before{content:"";position:absolute;top:0;bottom:0;right:100%;width:100vw;background:#fff}
+  .top{position:sticky;top:0;z-index:30}
+  .top .logo{transform:translateX(var(--logo-offset,0px))}
+  /* 메뉴는 화면 왼쪽에 붙여 넓은 화면에서도 아이콘 앞 여백이 늘어나지 않게 해요. */
+  .shell{max-width:none;margin:0;grid-template-columns:minmax(max-content,var(--sidebar-width,196px)) minmax(0,1fr)}
+  .side{
+    top:var(--header-height,0px);
+    height:max(0px,calc(100dvh - var(--header-height,0px)));
+    width:auto;
+    margin-left:0;
+    overflow-y:auto;
+  }
+  .side::before,.nav[aria-current="page"]::before{display:none}
+  .side .nav{flex-shrink:0;padding-left:12px}
+}
+
+/* 상담 입력은 페이지에서 스크롤하고, 긴 어가 브리핑만 내부에서 넘겨 봐요. */
+#page-detail #brief-side{position:static;max-height:none;overflow:visible}
+@media (min-width:1101px){
+  #page-detail #brief{
+    position:sticky;
+    top:calc(var(--header-height,0px) + 12px);
+    max-height:calc(100dvh - var(--header-height,0px) - 24px);
+    overflow-y:auto;
+  }
+}

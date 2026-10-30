@@ -1,0 +1,33 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.env.*
+!.env.example
+.local/
+*.log
+
+# Secrets and personal agent settings
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+CLAUDE.local.md
+AGENTS.override.md
+
+# graphify generated output
+graphify-out/
+
+# Local data
+logs/
+*.sqlite
+*.sqlite3
+*.db
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

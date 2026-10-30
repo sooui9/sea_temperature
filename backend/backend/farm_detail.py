@@ -220,10 +220,8 @@ def db() -> ConnectionPool:
         with _pool_lock:
             if pool is None:
                 p = ConnectionPool("", min_size=1, max_size=DB_POOL_MAX, open=True,
-                                   # Supabase pooler 는 prepared statement 미지원.
-                                   # autocommit: 조회 1건마다 BEGIN·COMMIT 왕복을 빼서 3배 빠름. 쓰기는 conn.transaction() 으로 묶음
-                                   kwargs={**get_settings().connection_kwargs(), "prepare_threshold": None,
-                                           "autocommit": True})
+                                   # Supabase pooler 는 prepared statement 미지원
+                                   kwargs={**get_settings().connection_kwargs(), "prepare_threshold": None})
                 claim_api.setup(p)
                 pool = p
                 log.info("DB pool ready")
@@ -1715,7 +1713,7 @@ def add_consult_log(household_id: int, body: ConsultLogIn):
         raise HTTPException(422, "상담 예약은 다음 연락·상담일이 필요해요")
     if nxt is not None and nxt.tzinfo is None:
         nxt = nxt.replace(tzinfo=KST)
-    with db().connection() as conn, conn.transaction(), conn.cursor(row_factory=dict_row) as cur:
+    with db().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         cur.execute("SELECT 1 FROM customer_service.fishery_households WHERE household_id = %s", (household_id,))
         if cur.fetchone() is None:
             raise HTTPException(404, "어가 정보를 찾을 수 없어요")
