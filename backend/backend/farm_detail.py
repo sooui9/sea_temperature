@@ -159,7 +159,7 @@ COLD_PHRASES = (
     ("경보 시 먹이 주기 중단 · 선별·분조 금지 (약관상 의무)", "저수온 특보 시 먹이량 조절 · 선별·이동 자제 (약관 의무는 수협 확인)"),
     ("경보가 나면 먹이 주기 중단, 선별·분조 금지 (약관상 의무)", "저수온 특보가 나면 먹이량 조절, 선별·이동 자제 (약관 의무는 수협 확인)"),
     ("경보가 나면 먹이 주기를 멈추고 선별·분조는 미뤄 주셔야 해요.", "저수온 특보가 나면 먹이량을 줄이고 선별·이동은 미뤄 주세요."),
-    ("경보 때 지켜야 할 의무를 안내하고", "저수온 때 지켜야 할 대응을 안내하고"),
+    ("경보 시 준수 의무 안내", "저수온 시 대응 요령 안내"),
     ("액화산소 등 대응 장비 점검 안내", "월동 대비(사육밀도·먹이량 조절) 안내"),
 )
 
@@ -1054,7 +1054,7 @@ def heat_status(profile: dict, joined_riders: list[str], perils: tuple = HEAT_PE
     excl_in = [c for c in profile["excl"] if _nospace(c["name"]) in joined] or \
               [{"name": r, "peril": profile["peril"]} for r in loose_excl]
     if excl_in:
-        return "excl", {"ok": False, "via": "부담보", "text": f"{excl_in[0]['name']} 가입 → {label} 손해는 보상하지 않아요"}
+        return "excl", {"ok": False, "via": "부담보", "text": f"{excl_in[0]['name']} 가입 → {label} 손해 보상 제외"}
     if profile["main"]:
         return "full", {"ok": True, "via": "주계약", "text": f"주계약에 {profile['main'][0]['peril']} 보장 포함"}
     if rider_in:
@@ -1062,7 +1062,7 @@ def heat_status(profile: dict, joined_riders: list[str], perils: tuple = HEAT_PE
     if profile["riders"]:
         return "norider", {"ok": False, "via": None,
                            "text": f"{label} 미보장 · {profile['riders'][0]['name']}을 추가해야 보장"}
-    return "noheat", {"ok": False, "via": None, "text": f"이 상품에는 {label} 보장(주계약·특약)이 없어요"}
+    return "noheat", {"ok": False, "via": None, "text": f"이 상품에는 {label} 보장(주계약·특약) 없음"}
 
 
 def heat_offer_text(profile: dict, label: str = "고수온") -> dict:
@@ -1072,7 +1072,7 @@ def heat_offer_text(profile: dict, label: str = "고수온") -> dict:
         return {"ok": True, "via": "주계약", "text": t}
     if profile["riders"]:
         return {"ok": None, "via": "특약", "text": f"{label}은 {profile['riders'][0]['name']}을 함께 넣어야 보장"}
-    return {"ok": False, "via": None, "text": f"이 상품에는 {label} 보장이 없어요"}
+    return {"ok": False, "via": None, "text": f"이 상품에는 {label} 보장 없음"}
 
 
 _MONTH_RANGE_RE = re.compile(r"(\d{1,2})\s*월?\s*[~∼\-–]\s*(?:익년|다음\s*해|이듬해)?\s*(\d{1,2})\s*월")
@@ -1234,7 +1234,7 @@ def heat_scenarios(card: dict, today: date, hh: dict) -> Optional[dict]:
     try:
         if code == "full" and c and c.get("status") == ACTIVE_CONTRACT:
             if not c.get("coverage_amount"):
-                return {"kind": "insured", "error": "가입금액 정보가 없어 계산할 수 없어요", "rows": []}
+                return {"kind": "insured", "error": "가입금액 정보 없음 · 계산 불가", "rows": []}
             if claim_api.mode == "none":
                 return {"kind": "insured", "error": "보험금 계산 API 미연결", "rows": []}
             amount = Decimal(str(c["coverage_amount"]))
@@ -1258,17 +1258,17 @@ def heat_scenarios(card: dict, today: date, hh: dict) -> Optional[dict]:
                         "plan": "표준형", "rate": "0.2"} if prev.get("coverage_amount")
                        else reference_terms(p["product_id"], card["species_id"]))
                 if not ref:
-                    return {"kind": "compare", "error": "비교할 가입금액 자료가 없어요", "rows": []}
+                    return {"kind": "compare", "error": "비교할 가입금액 자료 없음", "rows": []}
                 amount = ref["amount"]
                 riders = [heat_rider] if heat_rider and not p.get("heat_main") else []
                 terms = {**ref, "action": "가입하면"}
             if not amount:
-                return {"kind": "compare", "error": "가입금액 정보가 없어 계산할 수 없어요", "rows": []}
+                return {"kind": "compare", "error": "가입금액 정보 없음 · 계산 불가", "rows": []}
             now_rows = [{"rate": r, "loss": round(float(amount) * r)} for r in HEAT_SCENARIO_RATES]
             if claim_api.mode != "import":
                 return {"kind": "compare", "amount": amount, "basis": terms["basis"], "action": terms["action"],
                         "rows": [{**x, "payout": None} for x in now_rows],
-                        "error": "가입 시 금액은 보험금 계산 API 를 모듈로 연결했을 때만 계산돼요"}
+                        "error": "가입 시 금액은 보험금 계산 API 모듈 연결 시에만 계산"}
             target = {
                 "insurance_id": -1, "household_id": hh["household_id"], "product_id": p["product_id"],
                 "policy_number": "SIM", "total_premium": None, "start_date": today, "end_date": today + timedelta(days=364),
@@ -1415,7 +1415,7 @@ def recommend(card: dict, sea: dict, today: date) -> dict:
     actions: list[str] = []
     if code in ("none", "expired"):
         if not p:
-            return {"level": "check", "title": "가입 가능한 상품이 매핑되지 않았어요",
+            return {"level": "check", "title": "가입 가능 상품 미매핑",
                     "actions": ["insurance_map 에 이 어종이 있는지 확인", "수협에 가입 가능 상품 문의"]}
         head = "재가입 권유" if code == "expired" else "가입 권유"
         if alert:
@@ -1431,7 +1431,7 @@ def recommend(card: dict, sea: dict, today: date) -> dict:
         elif rider:
             actions.append(f"{rider} 함께 가입 권유")
         else:
-            actions.append("이 상품은 고수온 보장이 없어요 · 고수온 대비 다른 방법(지원사업 등) 안내")
+            actions.append("이 상품은 고수온 보장 없음 · 고수온 대비 다른 방법(지원사업 등) 안내")
         actions.append("입식 후 20일 안 입식신고 여부 확인")
         return {"level": "high", "title": title, "actions": actions}
     if code == "norider":
@@ -1441,11 +1441,11 @@ def recommend(card: dict, sea: dict, today: date) -> dict:
         return {"level": "mid", "title": "고수온 부담보 특약 가입 상태 → 다음 갱신 때 고수온 보장 포함 권유",
                 "actions": ["증권에서 부담보 특약 확인", "고수온 피해는 이번 계약으로 보상 안 됨을 안내"]}
     if code == "noheat":
-        return {"level": "mid", "title": "가입 상품에 고수온 보장이 없어요",
+        return {"level": "mid", "title": "가입 상품에 고수온 보장 없음",
                 "actions": ["같은 어종의 고수온 보장 상품·특약이 있는지 수협 확인"]}
     if code == "pending":
         return {"level": "mid", "title": "청약 중 → 보장 개시일·첫 보험료 납입 확인",
-                "actions": ["첫 보험료 납입 전 사고는 보상되지 않아요", "특보 전에 보장이 시작되는지 확인"]}
+                "actions": ["첫 보험료 납입 전 사고는 보상 제외", "특보 전에 보장이 시작되는지 확인"]}
     if code == "unknown":
         return {"level": "check", "title": "보장 내용 확인 필요", "actions": ["증권·상품 보장 정보 확인"]}
     # full
@@ -1462,36 +1462,36 @@ def recommend(card: dict, sea: dict, today: date) -> dict:
 # ---------------------------------------------------------------------------
 def talking_points(cards: list[dict], sea: dict, stage: int) -> list[dict]:
     if not cards:
-        return [{"key": True, "t": "등록된 양식 어종이 없어요 · 어종·입식 현황부터 확인"}]
+        return [{"key": True, "t": "등록된 양식 어종 없음 · 어종·입식 현황부터 확인"}]
     L, pts = cards[0], []
     alert = sea.get("alert")
     sale = (L.get("product") or {}).get("sale") or {"code": "unknown"}
     if L["ins"] in ("none", "expired", "unknown", "norider"):
         if alert:
-            pts.append({"key": True, "t": f"{alert.get('type', '특보')}가 이미 발령({alert.get('since', '')})돼서 지금 가입해도 "
-                                          "이번 고수온 피해는 보상되지 않아요 → 대응 요령 안내 후 다음 판매 기간 가입을 권해요"})
+            pts.append({"key": True, "t": f"{alert.get('type', '특보')}가 이미 발령({alert.get('since', '')})되어 지금 가입해도 "
+                                          "이번 고수온 피해는 보상 불가 → 대응 요령 안내 후 다음 판매 기간 가입 권유"})
         elif sale["code"] not in ("later", "closed"):
-            pts.append({"key": True, "t": "첫 보험료를 낸 날 이미 특보가 난 지역은 그 재해를 보상하지 않아요 → 특보 전에 가입해야 해요"})
+            pts.append({"key": True, "t": "첫 보험료 납입일에 이미 특보가 발령된 지역은 해당 재해 보상 제외 → 특보 전 가입 필요"})
     if L["ins"] == "unknown":
-        pts.insert(0, {"key": True, "t": "가입 여부·보장 내용부터 확인 · 다른 조합에서 가입했을 수도 있어요"})
+        pts.insert(0, {"key": True, "t": "가입 여부·보장 내용부터 확인 · 타 조합 가입 가능성 있음"})
     if L["ins"] == "expired":
         e = L.get("expired") or {}
-        pts.append({"key": True, "t": f"{e.get('product_name') or '이전'} 계약이 {e.get('end_date')}에 끝났어요 → 재가입 의향 확인"})
+        pts.append({"key": True, "t": f"{e.get('product_name') or '이전'} 계약 {e.get('end_date')} 만료 → 재가입 의향 확인"})
     if L["ins"] in ("none", "expired", "unknown"):
         pts.append({"t": "입식 후 20일 안에 품종·수량을 신고했는지 확인 (안 하면 재난지원금·양식보험 가입 불가)", "need": True})
     heat = L.get("heat") or {}
     if heat.get("via") == "특약" and L["ins"] != "full":
-        pts.append({"t": "고수온은 기본 보험만으로는 보장되지 않아요 · 특약을 함께 넣어야 해요"})
+        pts.append({"t": "고수온은 기본 보험만으로 보장 안 됨 · 특약 함께 가입 필요"})
     if L["ins"] == "excl":
         pts.append({"key": True, "t": "보험료를 줄이려고 고수온을 빼는 특약(부담보)을 넣었는지 증권으로 확인"})
     if L["ins"] == "noheat":
-        pts.append({"key": True, "t": "가입한 상품에 고수온 보장이 없어요 · 다른 상품·특약 가능 여부 수협 확인"})
+        pts.append({"key": True, "t": "가입한 상품에 고수온 보장 없음 · 다른 상품·특약 가능 여부 수협 확인"})
     if L["ins"] == "pending":
-        pts.append({"key": True, "t": "청약 상태예요 · 첫 보험료 납입·보장 개시일 확인 (개시 전 사고는 보상 안 됨)"})
+        pts.append({"key": True, "t": "청약 상태 · 첫 보험료 납입·보장 개시일 확인 (개시 전 사고는 보상 안 됨)"})
     if sale.get("code") == "soon" and L["ins"] in GAP_CODES:
-        pts.append({"key": True, "t": f"이 상품은 {sale.get('text')}이에요"})
+        pts.append({"key": True, "t": f"이 상품은 {sale.get('text')}"})
     if sale.get("code") == "later" and L["ins"] in GAP_CODES:
-        pts.append({"t": f"{sale.get('text')} 판매가 시작돼요 · 시작 주에 바로 연락하도록 예약"})
+        pts.append({"t": f"{sale.get('text')} 판매 시작 · 시작 주에 바로 연락하도록 예약"})
     c = L.get("contract") or {}
     if L["ins"] == "full" and c.get("days_left") is not None and c["days_left"] <= RENEW_NOTICE_DAYS:
         pts.append({"key": True, "t": f"만기 {c['end_date']} (D-{c['days_left']}) · 갱신 안내"})
@@ -1519,18 +1519,18 @@ def talking_points(cards: list[dict], sea: dict, stage: int) -> list[dict]:
 
 def check_guide(L: Optional[dict]) -> str:
     if not L:
-        return "양식 어종과 입식 현황부터 확인하세요."
+        return "양식 어종과 입식 현황부터 확인"
     sale = (L.get("product") or {}).get("sale") or {}
     return {
-        "none": (f"판매 시작({sale.get('text')}) 시기를 안내하고, 시작 주에 상담을 예약하세요." if sale.get("code") == "later"
-                 else "특보 발령 전, 판매 기한과 인수 조건을 확인하고 가입 의향을 물어보세요."),
-        "expired": "지난 계약이 끝났어요. 재가입 의향과 판매 기한을 확인하세요.",
-        "norider": "가입한 보험에 고수온 특약이 없어요. 특약을 더할 수 있는지와 가입 의향을 확인하세요.",
-        "excl": "증권에서 고수온을 뺀 특약(부담보)이 있는지 확인하세요.",
-        "noheat": "가입 상품에 고수온 보장이 없어요. 보완할 수 있는 상품이 있는지 확인하세요.",
-        "pending": "청약 중이에요. 첫 보험료 납입과 보장 개시일을 확인하세요.",
-        "unknown": "보험 가입 여부와 입식신고 여부부터 확인하세요.",
-    }.get(L["ins"], "경보 때 지켜야 할 의무를 안내하고, 피해가 보이면 바로 알리도록 하세요.")
+        "none": (f"판매 시작({sale.get('text')}) 시기 안내 · 시작 주 상담 예약" if sale.get("code") == "later"
+                 else "특보 발령 전 판매 기한·인수 조건 확인 후 가입 의향 확인"),
+        "expired": "지난 계약 만료 · 재가입 의향과 판매 기한 확인",
+        "norider": "가입 보험에 고수온 특약 없음 · 특약 추가 가능 여부와 가입 의향 확인",
+        "excl": "증권에서 고수온 제외 특약(부담보) 여부 확인",
+        "noheat": "가입 상품에 고수온 보장 없음 · 보완 가능 상품 여부 확인",
+        "pending": "청약 중 · 첫 보험료 납입과 보장 개시일 확인",
+        "unknown": "보험 가입 여부와 입식신고 여부부터 확인",
+    }.get(L["ins"], "경보 시 준수 의무 안내 · 피해 발견 시 즉시 신고 안내")
 
 
 def example_script(owner: str, region: str, L: Optional[dict], sea: dict) -> str:
@@ -1700,7 +1700,7 @@ def _household_detail(household_id: int):
     today = today_kst()
     hh = q_one(HOUSEHOLD_SQL, (household_id,))
     if hh is None:
-        raise HTTPException(404, "어가 정보를 찾을 수 없어요")
+        raise HTTPException(404, "어가 정보 없음")
     species = [s for s in q_all(SPECIES_SQL, (household_id,)) if s["status"] != "폐업"]
 
     sea = build_sea(hh, today)
@@ -1742,13 +1742,13 @@ def add_consult_log(household_id: int, body: ConsultLogIn):
     if body.result_status == "부재·재연락" and nxt is None:
         nxt = datetime.combine(today + timedelta(days=1), datetime.min.time(), tzinfo=KST).replace(hour=10)
     if body.result_status == "상담 예약" and nxt is None:
-        raise HTTPException(422, "상담 예약은 다음 연락·상담일이 필요해요")
+        raise HTTPException(422, "상담 예약은 다음 연락·상담일 입력 필요")
     if nxt is not None and nxt.tzinfo is None:
         nxt = nxt.replace(tzinfo=KST)
     with db().connection() as conn, conn.transaction(), conn.cursor(row_factory=dict_row) as cur:
         cur.execute("SELECT 1 FROM customer_service.fishery_households WHERE household_id = %s", (household_id,))
         if cur.fetchone() is None:
-            raise HTTPException(404, "어가 정보를 찾을 수 없어요")
+            raise HTTPException(404, "어가 정보 없음")
         if body.items:
             # consult_log_items 는 (log_id, mapping_id) UNIQUE → 한 번에 같은 어종을 두 번 보내면 안 됨
             ids = [i.mapping_id for i in body.items]
@@ -1809,7 +1809,7 @@ class EstimateIn(BaseModel):
 def household_consult(household_id: int):
     """상담 기록만 (통화 녹음을 올린 뒤 STT 결과를 다시 받을 때). 수온·보험 계산 없이 가벼워요."""
     if q_one("SELECT 1 FROM customer_service.fishery_households WHERE household_id = %s", (household_id,)) is None:
-        raise HTTPException(404, "어가 정보를 찾을 수 없어요")
+        raise HTTPException(404, "어가 정보 없음")
     return ok(load_consult(household_id, today_kst()))
 
 
@@ -1821,7 +1821,7 @@ def claim_estimate(household_id: int, body: EstimateIn):
                    WHERE c.household_id = %s AND c.insurance_id = %s AND t.mapping_id = %s""",
                 (household_id, body.insurance_id, body.mapping_id))
     if row is None:
-        raise HTTPException(404, "이 어가의 계약·어종이 아니에요")
+        raise HTTPException(404, "이 어가의 계약·어종 아님")
     peril = body.peril
     if not peril:
         prof = heat_profile(q_all(COVERAGES_SQL, ([row["product_id"]],)))
