@@ -1,4 +1,84 @@
-# sea_temperature
+# 수온 위험 어가 선제 상담 대시보드
+
+양식 어가의 고수온 피해를 미리 막기 위해, 상담 담당자가 연락할 어가와 수온 예측을 한 화면에서 보는 대시보드입니다.
+
+**배포 주소:** https://sea-temperature.onrender.com (접속하면 상담 홈으로 이동)
+
+![상담 홈 화면 (남해 · 저수온 모드, 가상 고객 데이터)](docs/images/consult_home.png)
+
+| 항목 | 내용 |
+|---|---|
+| 프로젝트 | KB-Bridge AI 금융데이터 과정 파이널 팀 프로젝트 (6인) |
+| 기간 | 2026.10.14 – 11.04 |
+| 성과 | 팀 우수상 · UI/UX 우수 평가 |
+| 사용 도구 | Figma · Claude Code · FastAPI · PostgreSQL · GitHub · Render |
+
+## 왜 만들었나
+
+- 고수온 피해는 커지는데 양식 어가 대부분이 보험 보장 밖에 있고, 가입이 저조한 주원인은 정보 부족입니다.
+- 처음에는 어민에게 수온 위험을 알리는 모바일 앱을 기획했지만, 고령 어민에게는 앱 설치와 지속 사용이 진입장벽이라는 판단에 따라 **수협 보험 상담 직원용 대시보드**로 사용자를 바꿨습니다.
+- 그래서 기존 보험 상담 업무에 수온 위험정보를 연결해, 상담 직원이 **위험 어가 확인 → 상담 우선순위 설정 → 안내 → 상담 결과 기록**을 한 흐름으로 처리하도록 만들었습니다.
+
+## 화면 흐름
+
+상담 직원의 업무 순서(누구에게 연락할지 → 고객 계약 상태 → 어가별 확인 → 근거가 되는 수온 예측)에 맞춰 화면을 배치했습니다.
+
+**상담 홈 → 고객 상담 현황 → 어가 상세 → 수온 예측**
+
+> 화면에 나오는 고객·어가 정보는 모두 가상 데이터입니다.
+
+## 목차
+
+- [개발 가이드](#개발-가이드): 배포 구조, 화면 파일, 백엔드 실행, 로컬 확인
+- [팀 규칙 문서](#-팀-규칙-문서-한눈에-보기): AGENTS · CLAUDE · DESIGN · LAN_SETUP
+- [Git 작업 순서](#git-작업-순서)
+
+## 개발 가이드
+
+배포는 **Render 하나로** 합니다. FastAPI 백엔드가 API와 화면 4개를 같이 내보냅니다. 예전 Streamlit 버전은 쓰지 않아 삭제했습니다. `main`에 PR이 merge되면 Render가 자동으로 다시 배포합니다. 보통 1~2분 걸립니다.
+
+Render가 쓰는 파일은 `backend/backend/` 폴더, 화면 HTML 4개, 공용 파일(`shell.js`·`shell.css`·`figma-theme.css`·`suhyup-logo.png`), `out/` 폴더입니다. 이 파일들의 이름이나 위치를 바꾸면 배포 사이트가 깨집니다. 공용 파일이 없으면 상단 바와 사이드바가 그려지지 않습니다. 새 화면은 `backend/backend/main.py`의 `SCREENS`에, 새 공용 파일은 `SHARED`에 넣어야 합니다.
+
+### 화면
+
+| 파일 | 화면 | 내용 |
+|---|---|---|
+| `consult_home.html` | 상담 홈 | 오늘 연락할 어가, 지역 수온, 신청·주의 추이 |
+| `consult_status.html` | 고객 상담 현황 | 고객 목록과 과거 상담 내역 |
+| `farm_detail.html` | 어가 상세 | 어가별 정보, 상담 기록, 어가 지역의 수온 추이 |
+| `sea_forecast.html` | 수온 예측 | 지역별 21일 수온 예측 (1~7일 ROMS, 8~21일 ECMWF 보정), 어종별 위험 |
+
+상단 바, 왼쪽 메뉴, 알림 패널은 따로 된 화면이 아니라 `shell.js`가 화면 4개에 공통으로 그립니다.
+
+화면 4개는 모두 FastAPI 백엔드(`backend/backend/main.py`)가 같이 내보냅니다. 화면이 데이터를 받지 못하면 가상 데이터(SAMPLE)를 쓰고 화면 위에 경고를 띄웁니다.
+
+> ⚠️ 각 화면의 `const API_BASE = …` 줄은 로컬과 배포 주소 모두에서 동작하도록 맞춰 둔 줄입니다. 고치지 마세요. 예전 파일로 작업하다 이 줄이 되돌아가면 배포 사이트가 서버에 연결되지 않습니다.
+
+### 백엔드 실행
+
+1. `backend/backend/team.env.example`을 같은 폴더에 `.env`로 복사하고 `DB_USER`·`DB_PASSWORD`에 **본인 팀 계정**을 적습니다. `.env`는 깃허브에 올라가지 않습니다. 비밀번호를 단톡·캡처에 노출하지 마세요.
+2. 해당 계정에 `insurance` 스키마 조회 권한이 있어야 합니다(없으면 503). 권한은 스키마 소유자(nifs_team2)나 서버 관리자가 부여합니다.
+3. 프로젝트 최상위 폴더에서:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend\backend\requirements.txt
+cd backend
+..\.venv\Scripts\python.exe -m uvicorn backend.main:app --port 8000
+```
+
+4. `http://127.0.0.1:8000/docs`에서 API를 직접 눌러 볼 수 있습니다. localhost·127.0.0.1 주소는 CORS 허용되어 있고, 다른 주소는 `.env`의 `CORS_ORIGINS`에 추가합니다.
+
+### 화면 확인 (로컬)
+
+백엔드를 켠 상태에서 아래 둘 중 하나로 엽니다.
+
+- **백엔드 주소로 열기 (배포와 같은 방식):** `http://127.0.0.1:8000/` → 상담 홈으로 이동합니다.
+- **화면만 따로 띄우기 (HTML 수정 중일 때):** 저장소 최상위 폴더에서 `py -m http.server 8765`를 켜고 `http://localhost:8765/consult_home.html`로 엽니다. 데이터는 8000번 백엔드에서 받아옵니다.
+
+HTML 파일을 더블클릭해서 열면(`file://`) 서버에 연결할 수 없어 가상 데이터만 보입니다.
+
+확인할 것: 상단에 **"DB 연결됨"**이 보이고 가상 데이터 경고가 없으면 정상입니다.
 
 ## 📌 팀 규칙 문서 한눈에 보기
 
@@ -80,57 +160,6 @@
 - 팀원 PC에서 FastAPI를 돌리려면 `team.env.example`을 `.env`로 복사하고 본인 계정과 비밀번호를 적습니다.
 - 접속 확인: `Test-NetConnection <서버PC 내부 IP> -Port 5432`의 결과가 `TcpTestSucceeded=True`면 됩니다.
 - 서버 PC가 켜져 있어야 하고, 팀원은 `init-db`나 백업 복원을 실행하지 않습니다.
-
-## 수온 위험 어가 관리 시스템
-
-양식 어가의 고수온 피해를 미리 막기 위해, 상담 담당자가 연락할 어가와 수온 예측을 한 화면에서 보는 대시보드입니다.
-
-**배포 주소:** https://sea-temperature.onrender.com (접속하면 상담 홈으로 이동)
-
-배포는 **Render 하나로** 합니다. FastAPI 백엔드가 API와 화면 4개를 같이 내보냅니다. 예전 Streamlit 버전은 쓰지 않아 삭제했습니다. `main`에 PR이 merge되면 Render가 자동으로 다시 배포합니다. 보통 1~2분 걸립니다.
-
-Render가 쓰는 파일은 `backend/backend/` 폴더, 화면 HTML 4개, 공용 파일(`shell.js`·`shell.css`·`figma-theme.css`·`suhyup-logo.png`), `out/` 폴더입니다. 이 파일들의 이름이나 위치를 바꾸면 배포 사이트가 깨집니다. 공용 파일이 없으면 상단 바와 사이드바가 그려지지 않습니다. 새 화면은 `backend/backend/main.py`의 `SCREENS`에, 새 공용 파일은 `SHARED`에 넣어야 합니다.
-
-### 화면
-
-| 파일 | 화면 | 내용 |
-|---|---|---|
-| `consult_home.html` | 상담 홈 | 오늘 연락할 어가, 지역 수온, 신청·주의 추이 |
-| `consult_status.html` | 고객 상담 현황 | 고객 목록과 과거 상담 내역 |
-| `farm_detail.html` | 어가 상세 | 어가별 정보, 상담 기록, 어가 지역의 수온 추이 |
-| `sea_forecast.html` | 수온 예측 | 지역별 21일 수온 예측 (1~7일 ROMS, 8~21일 ECMWF 보정), 어종별 위험 |
-
-상단 바, 왼쪽 메뉴, 알림 패널은 따로 된 화면이 아니라 `shell.js`가 화면 4개에 공통으로 그립니다.
-
-화면 4개는 모두 FastAPI 백엔드(`backend/backend/main.py`)가 같이 내보냅니다. 화면이 데이터를 받지 못하면 가상 데이터(SAMPLE)를 쓰고 화면 위에 경고를 띄웁니다.
-
-> ⚠️ 각 화면의 `const API_BASE = …` 줄은 로컬과 배포 주소 모두에서 동작하도록 맞춰 둔 줄입니다. 고치지 마세요. 예전 파일로 작업하다 이 줄이 되돌아가면 배포 사이트가 서버에 연결되지 않습니다.
-
-### 백엔드 실행
-
-1. `backend/backend/team.env.example`을 같은 폴더에 `.env`로 복사하고 `DB_USER`·`DB_PASSWORD`에 **본인 팀 계정**을 적습니다. `.env`는 깃허브에 올라가지 않습니다. 비밀번호를 단톡·캡처에 노출하지 마세요.
-2. 해당 계정에 `insurance` 스키마 조회 권한이 있어야 합니다(없으면 503). 권한은 스키마 소유자(nifs_team2)나 서버 관리자가 부여합니다.
-3. 프로젝트 최상위 폴더에서:
-
-```powershell
-py -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r backend\backend\requirements.txt
-cd backend
-..\.venv\Scripts\python.exe -m uvicorn backend.main:app --port 8000
-```
-
-4. `http://127.0.0.1:8000/docs`에서 API를 직접 눌러 볼 수 있습니다. localhost·127.0.0.1 주소는 CORS 허용되어 있고, 다른 주소는 `.env`의 `CORS_ORIGINS`에 추가합니다.
-
-### 화면 확인 (로컬)
-
-백엔드를 켠 상태에서 아래 둘 중 하나로 엽니다.
-
-- **백엔드 주소로 열기 (배포와 같은 방식):** `http://127.0.0.1:8000/` → 상담 홈으로 이동합니다.
-- **화면만 따로 띄우기 (HTML 수정 중일 때):** 저장소 최상위 폴더에서 `py -m http.server 8765`를 켜고 `http://localhost:8765/consult_home.html`로 엽니다. 데이터는 8000번 백엔드에서 받아옵니다.
-
-HTML 파일을 더블클릭해서 열면(`file://`) 서버에 연결할 수 없어 가상 데이터만 보입니다.
-
-확인할 것: 상단에 **"DB 연결됨"**이 보이고 가상 데이터 경고가 없으면 정상입니다.
 
 ## Git 작업 순서
 
